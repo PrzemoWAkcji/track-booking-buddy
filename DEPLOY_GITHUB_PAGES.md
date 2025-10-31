@@ -66,11 +66,39 @@ npm run deploy
 
 ---
 
-## Notatka
+## ⚙️ Konfiguracja Supabase
 
-- Dane przechowywane są w lokalnym storage przeglądarki
-- Każdy użytkownik ma swoje niezależne dane
-- Historia i archiwum są przechowywane w przeglądarce
-- CSV export będzie pobierany na komputer użytkownika
+**WAŻNE:** Aplikacja wymaga zmiennych środowiskowych Supabase!
+
+Przed deployment upewnij się, że masz plik `.env` z:
+
+```env
+VITE_SUPABASE_URL=https://qebyyjwwkjkhpfeufyor.supabase.co
+VITE_SUPABASE_PUBLISHABLE_KEY=twój-klucz-publiczny
+VITE_SUPABASE_PROJECT_ID=qebyyjwwkjkhpfeufyor
+```
+
+⚠️ **Zmienne środowiskowe są wbudowywane podczas budowania!**
+- `npm run build` wczytuje `.env` i wstawia wartości do kodu
+- Build zawiera twoje klucze (publiczne), więc są dostępne w aplikacji
+
+---
+
+## 📝 Notatka
+
+✅ **Dane w chmurze (Supabase)**:
+- Rezerwacje przechowywane w bazie danych PostgreSQL
+- Archiwum tygodniowe w tabeli `weekly_archive`
+- Dane synchronizowane między urządzeniami
+- Współdzielone dla wszystkich użytkowników
+
+✅ **Funkcje offline**:
+- PDF export pobierany na komputer użytkownika
+- Excel export lokalnie generowany
+
+🔒 **Bezpieczeństwo**:
+- Row Level Security (RLS) w Supabase
+- Klucz publiczny (Anon Key) można bezpiecznie udostępniać
+- API zabezpieczone politykami Supabase
 
 Gotowe! 🚀

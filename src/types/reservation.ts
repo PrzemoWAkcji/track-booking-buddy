@@ -50,6 +50,16 @@ export interface Reservation {
   category?: string; // "Grupa biegowa" or "Trening sportowy"
 }
 
+export interface WeeklyArchive {
+  id: string;
+  weekStart: string; // ISO date string "YYYY-MM-DD"
+  weekEnd: string;   // ISO date string "YYYY-MM-DD"
+  facilityType: FacilityType;
+  reservations: Reservation[];
+  savedAt: string;   // Formatted display date
+  createdAt?: Date;
+}
+
 export interface TimeSlot {
   start: string;
   end: string;

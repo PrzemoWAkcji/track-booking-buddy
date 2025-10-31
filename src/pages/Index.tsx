@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { startOfWeek, addWeeks, subWeeks, format, addDays } from "date-fns";
+import { startOfWeek, addWeeks, subWeeks, format, addDays, endOfWeek } from "date-fns";
 import { pl } from "date-fns/locale";
 import { ReservationForm } from "@/components/ReservationForm";
 import { WeeklySchedule } from "@/components/WeeklySchedule";
@@ -9,152 +9,91 @@ import { Reservation, Contractor, DEFAULT_CONTRACTORS, FacilityType, FACILITY_CO
 import { generateWeeklyPDF } from "@/utils/pdfGenerator";
 import { exportWeekToExcel, exportAllWeeksToExcel } from "@/utils/excelExporter";
 import { toast } from "sonner";
-
-const STORAGE_KEY = "reservations";
-const WEEKLY_ARCHIVE_KEY = "reservations_weekly_archive";
+import { useReservations } from "@/hooks/useReservations";
+import { useWeeklyArchive } from "@/hooks/useWeeklyArchive";
 
 const Index = () => {
+  // Use Supabase-backed hooks
+  const { 
+    reservations, 
+    isLoading, 
+    addReservation, 
+    deleteReservation, 
+    deleteAllReservations,
+    getAvailableTracks,
+    checkConflicts 
+  } = useReservations();
+
+  const {
+    archives: weeklyArchive,
+    isLoading: isArchiveLoading,
+    saveArchive,
+    deleteArchive
+  } = useWeeklyArchive();
+
   const [facilityType, setFacilityType] = useState<FacilityType>("track-6");
-  const [reservations, setReservations] = useState<Reservation[]>([]);
   const [contractors, setContractors] = useState<Contractor[]>(DEFAULT_CONTRACTORS);
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
   const [isRodoVersion, setIsRodoVersion] = useState(false);
-  const [weeklyArchive, setWeeklyArchive] = useState<Array<{ facilityType: FacilityType; weekStart: string; reservations: Reservation[]; savedAt: string }>>([]);
   const [showArchive, setShowArchive] = useState(false);
   
   const facilityConfig = FACILITY_CONFIGS[facilityType];
   
-  useEffect(() => {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      try {
-        const parsed = JSON.parse(stored);
-        const reservationsWithDates = parsed.map((res: any) => ({
-          ...res,
-          date: new Date(res.date)
-        }));
-        setReservations(reservationsWithDates);
-      } catch (error) {
-        console.error("Błąd przy ładowaniu rezerwacji:", error);
-      }
-    }
-    
-    const storedArchive = localStorage.getItem(WEEKLY_ARCHIVE_KEY);
-    if (storedArchive) {
-      try {
-        const parsed = JSON.parse(storedArchive);
-        const archiveWithDates = parsed.map((entry: any) => ({
-          facilityType: entry.facilityType,
-          weekStart: entry.weekStart,
-          savedAt: entry.savedAt,
-          reservations: entry.reservations.map((res: any) => ({
-            ...res,
-            date: new Date(res.date)
-          }))
-        }));
-        setWeeklyArchive(archiveWithDates);
-      } catch (error) {
-        console.error("Błąd przy ładowaniu archiwum:", error);
-      }
-    }
-  }, []);
-  
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(reservations));
-  }, [reservations]);
-  
   const saveWeekToArchive = () => {
     const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+    const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
     const weekStartStr = format(weekStart, "yyyy-MM-dd");
+    const weekEndStr = format(weekEnd, "yyyy-MM-dd");
     
-    const existingIndex = weeklyArchive.findIndex(
-      entry => entry.facilityType === facilityType && entry.weekStart === weekStartStr
-    );
+    const weekReservations = reservations.filter(r => r.facilityType === facilityType);
     
-    const newEntry = {
-      facilityType,
+    saveArchive.mutate({
       weekStart: weekStartStr,
-      reservations: reservations.filter(r => r.facilityType === facilityType),
-      savedAt: format(new Date(), "dd.MM.yyyy HH:mm")
-    };
-    
-    let updatedArchive;
-    if (existingIndex >= 0) {
-      updatedArchive = [...weeklyArchive];
-      updatedArchive[existingIndex] = newEntry;
-      toast.success("Harmonogram tygodnia został zaktualizowany");
-    } else {
-      updatedArchive = [newEntry, ...weeklyArchive];
-      toast.success("Harmonogram tygodnia został zapisany");
-    }
-    
-    setWeeklyArchive(updatedArchive);
-    localStorage.setItem(WEEKLY_ARCHIVE_KEY, JSON.stringify(updatedArchive));
+      weekEnd: weekEndStr,
+      facilityType,
+      reservations: weekReservations,
+    });
   };
 
   const loadWeekFromArchive = (entry: typeof weeklyArchive[0]) => {
+    // Convert archived reservations (may have date as string) to proper format
     const reservationsWithDates = entry.reservations.map(res => ({
       ...res,
-      date: new Date(res.date)
+      date: typeof res.date === 'string' ? new Date(res.date) : res.date
     }));
-    setReservations(reservationsWithDates);
+    
+    // Add all archived reservations to current reservations
+    reservationsWithDates.forEach(res => {
+      addReservation.mutate(res);
+    });
+    
     const weekStart = new Date(entry.weekStart);
     setCurrentWeek(weekStart);
     setFacilityType(entry.facilityType);
     toast.success(`Załadowano harmonogram z ${format(new Date(entry.weekStart), "dd.MM.yyyy", { locale: pl })}`);
   };
 
-  const handleAddReservations = (newReservations: Omit<Reservation, "id" | "facilityType">[]) => {
+  const handleAddReservations = async (newReservations: Omit<Reservation, "id" | "facilityType">[]) => {
     const processedReservations: Omit<Reservation, "id" | "facilityType">[] = [];
     const conflicts: string[] = [];
     
-    newReservations.forEach(newRes => {
+    for (const newRes of newReservations) {
       const trackCount = (newRes as any).trackCount || newRes.tracks.length;
       
       // If tracks already assigned (e.g., closed stadium), keep them
       if (newRes.tracks.length > 0) {
         processedReservations.push(newRes);
-        return;
+        continue;
       }
       
-      const existingOnSameDay = reservations.filter(
-        r => r.facilityType === facilityType && 
-        r.date.toDateString() === newRes.date.toDateString()
+      // Use the hook's getAvailableTracks function
+      const availableTracksForAllSlots = await getAvailableTracks(
+        facilityType,
+        newRes.date,
+        newRes.startTime,
+        newRes.endTime,
+        trackCount
       );
-      
-      // Check each time slot in the new reservation
-      const newSlots = TIME_SLOTS.filter(
-        slot => slot.start >= newRes.startTime && slot.start < newRes.endTime
-      );
-      
-      // Find available tracks for all time slots
-      const availableTracksForAllSlots: number[] = [];
-      
-      for (let trackNum = 1; trackNum <= facilityConfig.sections.length; trackNum++) {
-        let isAvailableInAllSlots = true;
-        
-        for (const slot of newSlots) {
-          const occupiedInSlot = existingOnSameDay.some(existing => 
-            slot.start >= existing.startTime && 
-            slot.start < existing.endTime && 
-            existing.tracks.includes(trackNum)
-          );
-          
-          if (occupiedInSlot) {
-            isAvailableInAllSlots = false;
-            break;
-          }
-        }
-        
-        if (isAvailableInAllSlots) {
-          availableTracksForAllSlots.push(trackNum);
-        }
-        
-        // Stop if we have enough tracks
-        if (availableTracksForAllSlots.length === trackCount) {
-          break;
-        }
-      }
       
       // Check if we have enough available tracks
       if (availableTracksForAllSlots.length < trackCount) {
@@ -168,7 +107,7 @@ const Index = () => {
           tracks: availableTracksForAllSlots
         });
       }
-    });
+    }
     
     if (conflicts.length > 0) {
       toast.error("Nie można dodać rezerwacji", {
@@ -177,13 +116,13 @@ const Index = () => {
       return;
     }
     
-    const reservationsWithIds = processedReservations.map((res) => ({
-      ...res,
-      id: crypto.randomUUID(),
-      facilityType: facilityType,
-    }));
-    setReservations((prev) => [...prev, ...reservationsWithIds]);
-    toast.success(`Dodano ${newReservations.length} rezerwacji`);
+    // Add reservations to Supabase
+    for (const res of processedReservations) {
+      addReservation.mutate({
+        ...res,
+        facilityType: facilityType,
+      });
+    }
   };
 
   const handleAddContractor = (name: string, category: string) => {
@@ -197,14 +136,12 @@ const Index = () => {
   };
 
   const handleDeleteReservation = (id: string) => {
-    setReservations((prev) => prev.filter((res) => res.id !== id));
-    toast.success("Rezerwacja została usunięta");
+    deleteReservation.mutate(id);
   };
 
   const handleClearAll = () => {
     if (window.confirm("Czy na pewno chcesz usunąć wszystkie rezerwacje?")) {
-      setReservations([]);
-      toast.success("Wszystkie rezerwacje zostały usunięte");
+      deleteAllReservations.mutate();
     }
   };
 
@@ -250,6 +187,18 @@ const Index = () => {
   };
 
   const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
+
+  // Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground">Ładowanie rezerwacji...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background">
