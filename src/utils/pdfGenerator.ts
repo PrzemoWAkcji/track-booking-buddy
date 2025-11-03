@@ -215,11 +215,11 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
             }
           }
           
-          const cellContent = reservation.isClosed
-            ? (reservation.closedReason && reservation.closedReason.trim().length > 0
-                ? reservation.closedReason.trim()
-                : "STADION ZAMKNIĘTY")
-            : reservation.contractor;
+          const cellContent = reservation.contractor === "BLOKADA" 
+            ? ""
+            : reservation.isClosed
+              ? (reservation.closedReason || "")
+              : reservation.contractor;
 
           row.push({
             content: cellContent,
