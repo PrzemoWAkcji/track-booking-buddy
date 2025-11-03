@@ -304,25 +304,48 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     tableWidth: "auto",
     didDrawCell: (data) => {
       const totalColumns = 2 + (SECTIONS.length * 7) + 2;
-      // Style cells with reservations
+      
+      // Track cell positions for green rectangle overlay (RODO mode)
       if (data.section === "body" && data.column.index > 1 && data.column.index < totalColumns - 2) {
-        // Check if this should have green background (RODO + track-6 + Mon-Fri 16:00-19:00)
         const slot = TIME_SLOTS[data.row.index];
-        const colIndexInData = data.column.index - 2; // Offset for first 2 columns (time)
+        const colIndexInData = data.column.index - 2;
         const dayIndex = Math.floor(colIndexInData / SECTIONS.length);
         const trackIndexInDay = colIndexInData % SECTIONS.length;
         const day = weekDays[dayIndex];
         const dayOfWeek = getDay(day);
-        const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday-Friday
-        const isAfternoon = slot.start >= "16:00" && slot.start < "19:00";
-        const isTrack6 = facilityConfig.id === "track-6";
-        const shouldBeGreen = isRodoVersion && isTrack6 && isWeekday && isAfternoon;
+        
+        // Store position for green rectangle drawing later
+        if (isRodoVersion && facilityConfig.id === "track-6") {
+          const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
+          const isAfternoon = slot.start >= "16:00" && slot.start < "19:00";
+          const isFirstTrack = trackIndexInDay === 0;
+          const isLastTrack = trackIndexInDay === SECTIONS.length - 1;
+          const isFirstSlot = slot.start === "16:00";
+          const isLastSlot = slot.start === "18:30";
+          
+          if (isWeekday && isAfternoon && isFirstTrack && isFirstSlot) {
+            // Store top-left corner
+            if (!(doc as any).rodoGreenBlocks) (doc as any).rodoGreenBlocks = [];
+            (doc as any).rodoGreenBlocks.push({ dayIndex, x: data.cell.x, y: data.cell.y, isStart: true });
+          }
+          if (isWeekday && isAfternoon && isLastTrack && isLastSlot) {
+            // Store bottom-right corner
+            if (!(doc as any).rodoGreenBlocks) (doc as any).rodoGreenBlocks = [];
+            (doc as any).rodoGreenBlocks.push({ 
+              dayIndex, 
+              x: data.cell.x + data.cell.width, 
+              y: data.cell.y + data.cell.height,
+              isEnd: true 
+            });
+          }
+        }
         
         const cellData = data.cell.raw;
         
         // Handle cells with content (reservations)
         if (typeof cellData === "object" && cellData && "content" in cellData && cellData.content) {
           const contractorName = String(cellData.content);
+          const day = weekDays[dayIndex];
           
           // Find the actual reservation to get its category
           const reservation = reservations.find((res) => {
@@ -332,10 +355,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
           
           // Determine color
           let color: [number, number, number];
-          if (shouldBeGreen) {
-            // Green for RODO afternoon slots
-            color = [134, 239, 172];
-          } else if (isRodoVersion) {
+          if (isRodoVersion) {
             const isClosed = isClosedLabel(contractorName);
             const category = isClosed ? "Stadion zamkniety" : (reservation?.category || CONTRACTOR_CATEGORIES[contractorName] || "Trening sportowy");
             color = CATEGORY_COLORS[category] || [220, 220, 220];
@@ -347,55 +367,15 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
           doc.setFillColor(color[0], color[1], color[2]);
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
           
-          // Draw borders - thicker for day boundaries, selective for green blocks
-          if (shouldBeGreen) {
-            // For green blocks - first COVER default borders with green, then draw only outer borders
-            
-            // Cover all default borders by extending the green fill slightly
-            doc.setFillColor(color[0], color[1], color[2]);
-            doc.rect(data.cell.x - 0.1, data.cell.y - 0.1, data.cell.width + 0.2, data.cell.height + 0.2, "F");
-            
-            doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-            
-            // Left border - ONLY if day boundary
-            if (trackIndexInDay === 0) {
-              doc.setLineWidth(0.5); // Thicker for day boundary
-              const leftX = data.cell.x;
-              doc.line(leftX, data.cell.y, leftX, data.cell.y + data.cell.height);
-            }
-            
-            // Right border - ONLY if day boundary
-            if (trackIndexInDay === SECTIONS.length - 1) {
-              doc.setLineWidth(0.5); // Thicker for day boundary
-              const rightX = data.cell.x + data.cell.width;
-              doc.line(rightX, data.cell.y, rightX, data.cell.y + data.cell.height);
-            }
-            
-            // Top border - only if first afternoon slot
-            const isFirstAfternoonSlot = slot.start === "16:00";
-            if (isFirstAfternoonSlot) {
-              doc.setLineWidth(0.2);
-              doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
-            }
-            
-            // Bottom border - only if last afternoon slot
-            const isLastAfternoonSlot = slot.start === "18:30";
-            if (isLastAfternoonSlot) {
-              doc.setLineWidth(0.2);
-              const bottomY = data.cell.y + data.cell.height;
-              doc.line(data.cell.x, bottomY, data.cell.x + data.cell.width, bottomY);
-            }
-          } else {
-            // Normal borders for non-green cells
-            doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-            doc.setLineWidth(0.2);
-            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
-            
-            // Add thicker day boundary line if needed
-            if (trackIndexInDay === 0) {
-              doc.setLineWidth(0.5);
-              doc.line(data.cell.x, data.cell.y, data.cell.x, data.cell.y + data.cell.height);
-            }
+          // Draw borders with thicker day boundaries
+          doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+          doc.setLineWidth(0.2);
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
+          
+          // Add thicker day boundary line if needed
+          if (trackIndexInDay === 0) {
+            doc.setLineWidth(0.5);
+            doc.line(data.cell.x, data.cell.y, data.cell.x, data.cell.y + data.cell.height);
           }
           
           // Use black text for better readability
@@ -419,46 +399,8 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
               maxWidth: data.cell.width - 1,
             });
           }
-        } else if (shouldBeGreen) {
-          // Empty cells in RODO afternoon slots - green background, no text
-          const color: [number, number, number] = [134, 239, 172];
-          doc.setFillColor(color[0], color[1], color[2]);
-          
-          // Cover all default borders by extending the green fill slightly
-          doc.rect(data.cell.x - 0.1, data.cell.y - 0.1, data.cell.width + 0.2, data.cell.height + 0.2, "F");
-          
-          // Draw selective borders - only outer edges
-          doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-          
-          // Left border - thicker if day boundary
-          if (trackIndexInDay === 0) {
-            doc.setLineWidth(0.5); // Thicker for day boundary
-            doc.line(data.cell.x, data.cell.y, data.cell.x, data.cell.y + data.cell.height);
-          }
-          
-          // Right border - thicker if day boundary
-          if (trackIndexInDay === SECTIONS.length - 1) {
-            doc.setLineWidth(0.5); // Thicker for day boundary
-            const rightX = data.cell.x + data.cell.width;
-            doc.line(rightX, data.cell.y, rightX, data.cell.y + data.cell.height);
-          }
-          
-          // Top border - only if first afternoon slot
-          const isFirstAfternoonSlot = slot.start === "16:00";
-          if (isFirstAfternoonSlot) {
-            doc.setLineWidth(0.2);
-            doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
-          }
-          
-          // Bottom border - only if last afternoon slot
-          const isLastAfternoonSlot = slot.start === "18:30";
-          if (isLastAfternoonSlot) {
-            doc.setLineWidth(0.2);
-            const bottomY = data.cell.y + data.cell.height;
-            doc.line(data.cell.x, bottomY, data.cell.x + data.cell.width, bottomY);
-          }
         } else {
-          // Normal empty cells - add thicker day boundary if needed
+          // Empty cells - add thicker day boundary if needed
           if (trackIndexInDay === 0) {
             doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
             doc.setLineWidth(0.5);
@@ -469,18 +411,38 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     },
   });
 
+  // Draw green rectangles for RODO afternoon blocks (16:00-19:00, Mon-Fri) if enabled
+  if (isRodoVersion && facilityConfig.id === "track-6" && (doc as any).rodoGreenBlocks) {
+    const blocks = (doc as any).rodoGreenBlocks;
+    
+    // Group blocks by day
+    const blocksByDay: { [key: number]: { start?: any; end?: any } } = {};
+    blocks.forEach((block: any) => {
+      if (!blocksByDay[block.dayIndex]) blocksByDay[block.dayIndex] = {};
+      if (block.isStart) blocksByDay[block.dayIndex].start = block;
+      if (block.isEnd) blocksByDay[block.dayIndex].end = block;
+    });
+    
+    // Draw rectangles for each day
+    Object.entries(blocksByDay).forEach(([dayIndex, coords]: [string, any]) => {
+      if (coords.start && coords.end) {
+        const x = coords.start.x;
+        const y = coords.start.y;
+        const width = coords.end.x - coords.start.x;
+        const height = coords.end.y - coords.start.y;
+        
+        // Draw semi-transparent green rectangle
+        doc.setFillColor(134, 239, 172);
+        doc.setGlobalAlpha(0.5);
+        doc.rect(x, y, width, height, "F");
+        doc.setGlobalAlpha(1.0);
+      }
+    });
+  }
+
   // Add legend for RODO version - only if there are reservations
   if (isRodoVersion && reservations.length > 0) {
-    let finalY = (doc as any).lastAutoTable.finalY || 30;
-    
-    // Check if legend will fit on current page (A4 landscape height is ~595pt)
-    const legendHeight = 40; // Approximate height needed for legend
-    const pageHeight = doc.internal.pageSize.height;
-    
-    if (finalY + legendHeight > pageHeight - 10) {
-      doc.addPage();
-      finalY = 20; // Start from top of new page
-    }
+    const finalY = (doc as any).lastAutoTable.finalY || 30;
     
     doc.setFontSize(8);
     doc.setFont("Roboto", "bold");
@@ -534,7 +496,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     );
   } else {
     // For non-RODO version, show all contractors with their colors
-    let finalY = (doc as any).lastAutoTable.finalY || 30;
+    const finalY = (doc as any).lastAutoTable.finalY || 30;
     
     const uniqueContractors = Array.from(new Set(reservations.map(r => r.contractor)));
     const hasClosedReservations = reservations.some(r => r.isClosed);
@@ -555,15 +517,6 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     }
     
     if (legendEntries.length > 0) {
-      // Check if legend will fit on current page
-      const legendHeight = 15 + (legendEntries.length * 8); // Title + entries
-      const pageHeight = doc.internal.pageSize.height;
-      
-      if (finalY + legendHeight > pageHeight - 10) {
-        doc.addPage();
-        finalY = 20; // Start from top of new page
-      }
-      
       doc.setFontSize(8);
       doc.setFont("Roboto", "bold");
       doc.text("Legenda:", 10, finalY + 10);
