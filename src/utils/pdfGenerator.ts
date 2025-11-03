@@ -349,7 +349,12 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
           
           // Draw borders - thicker for day boundaries, selective for green blocks
           if (shouldBeGreen) {
-            // For green blocks - only draw outer borders (no internal lines)
+            // For green blocks - first COVER default borders with green, then draw only outer borders
+            
+            // Cover all default borders by extending the green fill slightly
+            doc.setFillColor(color[0], color[1], color[2]);
+            doc.rect(data.cell.x - 0.1, data.cell.y - 0.1, data.cell.width + 0.2, data.cell.height + 0.2, "F");
+            
             doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
             
             // Left border - ONLY if day boundary
@@ -418,7 +423,9 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
           // Empty cells in RODO afternoon slots - green background, no text
           const color: [number, number, number] = [134, 239, 172];
           doc.setFillColor(color[0], color[1], color[2]);
-          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
+          
+          // Cover all default borders by extending the green fill slightly
+          doc.rect(data.cell.x - 0.1, data.cell.y - 0.1, data.cell.width + 0.2, data.cell.height + 0.2, "F");
           
           // Draw selective borders - only outer edges
           doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
@@ -464,7 +471,16 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
 
   // Add legend for RODO version - only if there are reservations
   if (isRodoVersion && reservations.length > 0) {
-    const finalY = (doc as any).lastAutoTable.finalY || 30;
+    let finalY = (doc as any).lastAutoTable.finalY || 30;
+    
+    // Check if legend will fit on current page (A4 landscape height is ~595pt)
+    const legendHeight = 40; // Approximate height needed for legend
+    const pageHeight = doc.internal.pageSize.height;
+    
+    if (finalY + legendHeight > pageHeight - 10) {
+      doc.addPage();
+      finalY = 20; // Start from top of new page
+    }
     
     doc.setFontSize(8);
     doc.setFont("Roboto", "bold");
@@ -518,7 +534,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     );
   } else {
     // For non-RODO version, show all contractors with their colors
-    const finalY = (doc as any).lastAutoTable.finalY || 30;
+    let finalY = (doc as any).lastAutoTable.finalY || 30;
     
     const uniqueContractors = Array.from(new Set(reservations.map(r => r.contractor)));
     const hasClosedReservations = reservations.some(r => r.isClosed);
@@ -539,6 +555,15 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     }
     
     if (legendEntries.length > 0) {
+      // Check if legend will fit on current page
+      const legendHeight = 15 + (legendEntries.length * 8); // Title + entries
+      const pageHeight = doc.internal.pageSize.height;
+      
+      if (finalY + legendHeight > pageHeight - 10) {
+        doc.addPage();
+        finalY = 20; // Start from top of new page
+      }
+      
       doc.setFontSize(8);
       doc.setFont("Roboto", "bold");
       doc.text("Legenda:", 10, finalY + 10);
