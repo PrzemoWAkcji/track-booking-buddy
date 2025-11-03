@@ -243,6 +243,44 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
   });
 
   
+  // Generate column styles dynamically to ensure equal width for all track columns
+  const columnStyles: any = {
+    0: { 
+      cellWidth: 8,
+      fontStyle: "bold",
+      fontSize: 5,
+      fillColor: colors.lightGray,
+      textColor: colors.border,
+    },
+    1: {
+      cellWidth: 8,
+      fontStyle: "bold",
+      fontSize: 5,
+      fillColor: colors.lightGray,
+      textColor: colors.border,
+    },
+    [2 + (SECTIONS.length * 7)]: {
+      cellWidth: 8,
+      fontStyle: "bold",
+      fontSize: 5,
+      fillColor: colors.lightGray,
+      textColor: colors.border,
+    },
+    [2 + (SECTIONS.length * 7) + 1]: {
+      cellWidth: 8,
+      fontStyle: "bold",
+      fontSize: 5,
+      fillColor: colors.lightGray,
+      textColor: colors.border,
+    },
+  };
+  
+  // Set equal width for all track columns (columns 2 to 2 + SECTIONS.length * 7 - 1)
+  const trackColumnWidth = 11;
+  for (let i = 2; i < 2 + (SECTIONS.length * 7); i++) {
+    columnStyles[i] = { cellWidth: trackColumnWidth };
+  }
+  
   autoTable(doc, {
     head: [headerRow, trackRow],
     body: body,
@@ -270,36 +308,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       cellPadding: 1.2,
       lineWidth: 0.2,
     },
-    columnStyles: {
-      0: { 
-        cellWidth: 8,
-        fontStyle: "bold",
-        fontSize: 5,
-        fillColor: colors.lightGray,
-        textColor: colors.border,
-      },
-      1: {
-        cellWidth: 8,
-        fontStyle: "bold",
-        fontSize: 5,
-        fillColor: colors.lightGray,
-        textColor: colors.border,
-      },
-      [2 + (SECTIONS.length * 7)]: {
-        cellWidth: 8,
-        fontStyle: "bold",
-        fontSize: 5,
-        fillColor: colors.lightGray,
-        textColor: colors.border,
-      },
-      [2 + (SECTIONS.length * 7) + 1]: {
-        cellWidth: 8,
-        fontStyle: "bold",
-        fontSize: 5,
-        fillColor: colors.lightGray,
-        textColor: colors.border,
-      },
-    },
+    columnStyles,
     margin: { top: 30, left: 5, right: 5, bottom: 5 },
     tableWidth: "auto",
     didDrawCell: (data) => {
