@@ -45,7 +45,6 @@ export const WeeklySchedule = ({
     "Sword Athletics Club": "bg-yellow-300 dark:bg-yellow-900/30 border-yellow-400 dark:border-yellow-700",
     "Endless Pain": "bg-cyan-300 dark:bg-cyan-900/30 border-cyan-400 dark:border-cyan-700",
     "Run Club": "bg-lime-300 dark:bg-lime-900/30 border-lime-400 dark:border-lime-700",
-    "BLOKADA": "bg-green-300 dark:bg-green-900/30 border-green-400 dark:border-green-700",
   };
 
   return (
@@ -152,7 +151,7 @@ export const WeeklySchedule = ({
                               "bg-gray-300 dark:bg-gray-700"
                         )}
                       >
-                        {reservation.contractor !== "BLOKADA" && (reservation.closedReason || reservation.contractor) && (
+                        {(reservation.closedReason || reservation.contractor) && (
                           <div className="text-xs px-1 truncate">
                             {reservation.isClosed 
                               ? reservation.closedReason

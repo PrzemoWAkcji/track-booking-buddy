@@ -4,7 +4,7 @@ import { pl } from "date-fns/locale";
 import { ReservationForm } from "@/components/ReservationForm";
 import { WeeklySchedule } from "@/components/WeeklySchedule";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Download, Calendar, History, Trash2, FileText, Lock } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Calendar, History, Trash2, FileText } from "lucide-react";
 import { Reservation, Contractor, DEFAULT_CONTRACTORS, FacilityType, FACILITY_CONFIGS, TIME_SLOTS } from "@/types/reservation";
 import { generateWeeklyPDF } from "@/utils/pdfGenerator";
 import { exportWeekToExcel, exportAllWeeksToExcel } from "@/utils/excelExporter";
@@ -143,72 +143,6 @@ const Index = () => {
     if (window.confirm("Czy na pewno chcesz usunąć wszystkie rezerwacje?")) {
       deleteAllReservations.mutate();
     }
-  };
-
-  const handleBlockWeekdayAfternoons = () => {
-    // Only for track-6 facility
-    if (facilityType !== "track-6") {
-      toast.error("Ta funkcja działa tylko dla Stadionu 6-torowego");
-      return;
-    }
-
-    if (!window.confirm("Czy na pewno chcesz zablokować wolne tory Pon-Pt w godz. 16:00-19:00?")) {
-      return;
-    }
-
-    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-    const newReservations: Omit<Reservation, "id">[] = [];
-    
-    // Time slots for 16:00-19:00 (6 slots of 30 min each)
-    const afternoonSlots = TIME_SLOTS.filter(slot => 
-      slot.start >= "16:00" && slot.start < "19:00"
-    );
-
-    // Days Monday-Friday (1-5)
-    for (let dayOffset = 0; dayOffset < 5; dayOffset++) {
-      const currentDate = addDays(weekStart, dayOffset);
-      
-      // For each time slot
-      for (const slot of afternoonSlots) {
-        // Check each track (1-6)
-        for (let trackNum = 1; trackNum <= 6; trackNum++) {
-          // Check if this specific track is available
-          const hasConflict = reservations.some(res => 
-            res.facilityType === "track-6" &&
-            res.date.toDateString() === currentDate.toDateString() &&
-            res.tracks.includes(trackNum) &&
-            // Check time overlap
-            !(res.endTime <= slot.start || res.startTime >= slot.end)
-          );
-
-          // If track is free, create RODO reservation
-          if (!hasConflict) {
-            newReservations.push({
-              contractor: "BLOKADA",
-              date: currentDate,
-              startTime: slot.start,
-              endTime: slot.end,
-              tracks: [trackNum],
-              facilityType: "track-6",
-              isClosed: false,
-              category: "Trening sportowy"
-            });
-          }
-        }
-      }
-    }
-
-    if (newReservations.length === 0) {
-      toast.info("Wszystkie tory są już zajęte w tym czasie");
-      return;
-    }
-
-    // Add all new reservations
-    newReservations.forEach(res => {
-      addReservation.mutate(res);
-    });
-
-    toast.success(`Zablokowano ${newReservations.length} wolnych slotów torowych`);
   };
 
   const handleGeneratePDF = () => {
@@ -375,16 +309,6 @@ const Index = () => {
             >
               <History className="mr-2 h-4 w-4" />
               Archiwum ({weeklyArchive.length})
-            </Button>
-
-            <Button
-              onClick={handleBlockWeekdayAfternoons}
-              variant="outline"
-              size="sm"
-              title="Blokuj wolne tory Pon-Pt 16:00-19:00 (RODO)"
-              disabled={facilityType !== "track-6"}
-            >
-              <Lock className="h-4 w-4" />
             </Button>
 
             <Button

@@ -215,11 +215,9 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
             }
           }
           
-          const cellContent = reservation.contractor === "BLOKADA" 
-            ? ""
-            : reservation.isClosed
-              ? (reservation.closedReason || "")
-              : reservation.contractor;
+          const cellContent = reservation.isClosed
+            ? (reservation.closedReason || "")
+            : reservation.contractor;
 
           row.push({
             content: cellContent,
@@ -233,7 +231,21 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
 
           sectionIndex += colSpan;
         } else {
-          row.push("");
+          // Check if this should be a RODO block (Mon-Fri 16:00-19:00 on track-6)
+          const dayOfWeek = getDay(day);
+          const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday-Friday
+          const isAfternoon = slot.start >= "16:00" && slot.start < "19:00";
+          const isTrack6 = facilityConfig.id === "track-6";
+          
+          if (isRodoVersion && isTrack6 && isWeekday && isAfternoon) {
+            // Add special marker for RODO block
+            row.push({
+              content: "__RODO_BLOCK__",
+              colSpan: 1,
+            });
+          } else {
+            row.push("");
+          }
           sectionIndex++;
         }
       }
@@ -311,6 +323,20 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         const cellData = data.cell.raw;
         if (typeof cellData === "object" && cellData && "content" in cellData && cellData.content) {
           const contractorName = String(cellData.content);
+          
+          // Check if this is a RODO block marker
+          if (contractorName === "__RODO_BLOCK__") {
+            // Use green color (same as "KS CZEMPION")
+            const color: [number, number, number] = [134, 239, 172];
+            doc.setFillColor(color[0], color[1], color[2]);
+            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
+            
+            // Draw border
+            doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+            doc.setLineWidth(0.2);
+            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
+            return; // Don't draw any text
+          }
           
           // Find the actual reservation to get its category
           const reservation = reservations.find((res) => {
