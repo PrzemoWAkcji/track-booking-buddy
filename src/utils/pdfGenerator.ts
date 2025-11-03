@@ -231,21 +231,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
 
           sectionIndex += colSpan;
         } else {
-          // Check if this should be a RODO block (Mon-Fri 16:00-19:00 on track-6)
-          const dayOfWeek = getDay(day);
-          const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday-Friday
-          const isAfternoon = slot.start >= "16:00" && slot.start < "19:00";
-          const isTrack6 = facilityConfig.id === "track-6";
-          
-          if (isRodoVersion && isTrack6 && isWeekday && isAfternoon) {
-            // Add special marker for RODO block
-            row.push({
-              content: "__RODO_BLOCK__",
-              colSpan: 1,
-            });
-          } else {
-            row.push("");
-          }
+          row.push("");
           sectionIndex++;
         }
       }
@@ -320,34 +306,33 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       const totalColumns = 2 + (SECTIONS.length * 7) + 2;
       // Style cells with reservations
       if (data.section === "body" && data.column.index > 1 && data.column.index < totalColumns - 2) {
+        // Check if this should have green background (RODO + track-6 + Mon-Fri 16:00-19:00)
+        const slot = TIME_SLOTS[data.row.index];
+        const day = weekDays[Math.floor((data.column.index - 2) / SECTIONS.length)];
+        const dayOfWeek = getDay(day);
+        const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday-Friday
+        const isAfternoon = slot.start >= "16:00" && slot.start < "19:00";
+        const isTrack6 = facilityConfig.id === "track-6";
+        const shouldBeGreen = isRodoVersion && isTrack6 && isWeekday && isAfternoon;
+        
         const cellData = data.cell.raw;
+        
+        // Handle cells with content (reservations)
         if (typeof cellData === "object" && cellData && "content" in cellData && cellData.content) {
           const contractorName = String(cellData.content);
           
-          // Check if this is a RODO block marker
-          if (contractorName === "__RODO_BLOCK__") {
-            // Use green color (same as "KS CZEMPION")
-            const color: [number, number, number] = [134, 239, 172];
-            doc.setFillColor(color[0], color[1], color[2]);
-            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
-            
-            // Draw border
-            doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-            doc.setLineWidth(0.2);
-            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
-            return; // Don't draw any text
-          }
-          
           // Find the actual reservation to get its category
           const reservation = reservations.find((res) => {
-            if (!res.date || res.date.toDateString() !== weekDays[Math.floor((data.column.index - 2) / SECTIONS.length)].toDateString()) return false;
-            const slot = TIME_SLOTS[data.row.index];
+            if (!res.date || res.date.toDateString() !== day.toDateString()) return false;
             return slot.start >= res.startTime && slot.start < res.endTime;
           });
           
-          // For RODO version, use category colors
+          // Determine color
           let color: [number, number, number];
-          if (isRodoVersion) {
+          if (shouldBeGreen) {
+            // Green for RODO afternoon slots
+            color = [134, 239, 172];
+          } else if (isRodoVersion) {
             const isClosed = isClosedLabel(contractorName);
             const category = isClosed ? "Stadion zamkniety" : (reservation?.category || CONTRACTOR_CATEGORIES[contractorName] || "Trening sportowy");
             color = CATEGORY_COLORS[category] || [220, 220, 220];
@@ -359,7 +344,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
           doc.setFillColor(color[0], color[1], color[2]);
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
           
-          // Only draw border for outer edges, not internal lines
+          // Draw border
           doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
           doc.setLineWidth(0.2);
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
@@ -385,6 +370,16 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
               maxWidth: data.cell.width - 1,
             });
           }
+        } else if (shouldBeGreen) {
+          // Empty cells in RODO afternoon slots - green background, no text
+          const color: [number, number, number] = [134, 239, 172];
+          doc.setFillColor(color[0], color[1], color[2]);
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
+          
+          // Draw border
+          doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+          doc.setLineWidth(0.2);
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
         }
       }
     },
