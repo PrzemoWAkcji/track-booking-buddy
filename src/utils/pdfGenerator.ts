@@ -308,7 +308,10 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       if (data.section === "body" && data.column.index > 1 && data.column.index < totalColumns - 2) {
         // Check if this should have green background (RODO + track-6 + Mon-Fri 16:00-19:00)
         const slot = TIME_SLOTS[data.row.index];
-        const day = weekDays[Math.floor((data.column.index - 2) / SECTIONS.length)];
+        const colIndexInData = data.column.index - 2; // Offset for first 2 columns (time)
+        const dayIndex = Math.floor(colIndexInData / SECTIONS.length);
+        const trackIndexInDay = colIndexInData % SECTIONS.length;
+        const day = weekDays[dayIndex];
         const dayOfWeek = getDay(day);
         const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5; // Monday-Friday
         const isAfternoon = slot.start >= "16:00" && slot.start < "19:00";
@@ -344,10 +347,59 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
           doc.setFillColor(color[0], color[1], color[2]);
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
           
-          // Draw border
-          doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-          doc.setLineWidth(0.2);
-          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
+          // Draw borders - thicker for day boundaries, selective for green blocks
+          if (shouldBeGreen) {
+            // For green blocks - only draw outer borders (no internal lines)
+            doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+            
+            // Left border - thicker if day boundary, normal otherwise
+            if (trackIndexInDay === 0) {
+              doc.setLineWidth(0.5); // Thicker for day boundary
+            } else {
+              // Check if left neighbor is also green
+              const leftIsGreen = trackIndexInDay > 0;
+              if (!leftIsGreen) {
+                doc.setLineWidth(0.2);
+              }
+            }
+            if (trackIndexInDay === 0 || trackIndexInDay > 0) {
+              const leftX = data.cell.x;
+              doc.line(leftX, data.cell.y, leftX, data.cell.y + data.cell.height);
+            }
+            
+            // Right border - thicker if day boundary
+            if (trackIndexInDay === SECTIONS.length - 1) {
+              doc.setLineWidth(0.5); // Thicker for day boundary
+              const rightX = data.cell.x + data.cell.width;
+              doc.line(rightX, data.cell.y, rightX, data.cell.y + data.cell.height);
+            }
+            
+            // Top border - only if not green above
+            const isFirstAfternoonSlot = slot.start === "16:00";
+            if (isFirstAfternoonSlot) {
+              doc.setLineWidth(0.2);
+              doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
+            }
+            
+            // Bottom border - only if not green below
+            const isLastAfternoonSlot = slot.start === "18:30";
+            if (isLastAfternoonSlot) {
+              doc.setLineWidth(0.2);
+              const bottomY = data.cell.y + data.cell.height;
+              doc.line(data.cell.x, bottomY, data.cell.x + data.cell.width, bottomY);
+            }
+          } else {
+            // Normal borders for non-green cells
+            doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+            doc.setLineWidth(0.2);
+            doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
+            
+            // Add thicker day boundary line if needed
+            if (trackIndexInDay === 0) {
+              doc.setLineWidth(0.5);
+              doc.line(data.cell.x, data.cell.y, data.cell.x, data.cell.y + data.cell.height);
+            }
+          }
           
           // Use black text for better readability
           const isClosed = isClosedLabel(contractorName);
@@ -376,10 +428,43 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
           doc.setFillColor(color[0], color[1], color[2]);
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
           
-          // Draw border
+          // Draw selective borders - only outer edges
           doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
-          doc.setLineWidth(0.2);
-          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
+          
+          // Left border - thicker if day boundary
+          if (trackIndexInDay === 0) {
+            doc.setLineWidth(0.5); // Thicker for day boundary
+            doc.line(data.cell.x, data.cell.y, data.cell.x, data.cell.y + data.cell.height);
+          }
+          
+          // Right border - thicker if day boundary
+          if (trackIndexInDay === SECTIONS.length - 1) {
+            doc.setLineWidth(0.5); // Thicker for day boundary
+            const rightX = data.cell.x + data.cell.width;
+            doc.line(rightX, data.cell.y, rightX, data.cell.y + data.cell.height);
+          }
+          
+          // Top border - only if first afternoon slot
+          const isFirstAfternoonSlot = slot.start === "16:00";
+          if (isFirstAfternoonSlot) {
+            doc.setLineWidth(0.2);
+            doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
+          }
+          
+          // Bottom border - only if last afternoon slot
+          const isLastAfternoonSlot = slot.start === "18:30";
+          if (isLastAfternoonSlot) {
+            doc.setLineWidth(0.2);
+            const bottomY = data.cell.y + data.cell.height;
+            doc.line(data.cell.x, bottomY, data.cell.x + data.cell.width, bottomY);
+          }
+        } else {
+          // Normal empty cells - add thicker day boundary if needed
+          if (trackIndexInDay === 0) {
+            doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
+            doc.setLineWidth(0.5);
+            doc.line(data.cell.x, data.cell.y, data.cell.x, data.cell.y + data.cell.height);
+          }
         }
       }
     },
