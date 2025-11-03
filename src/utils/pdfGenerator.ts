@@ -276,7 +276,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
   };
   
   // Set equal width for all track columns (columns 2 to 2 + SECTIONS.length * 7 - 1)
-  const trackColumnWidth = 11;
+  const trackColumnWidth = 6;
   for (let i = 2; i < 2 + (SECTIONS.length * 7); i++) {
     columnStyles[i] = { cellWidth: trackColumnWidth };
   }
