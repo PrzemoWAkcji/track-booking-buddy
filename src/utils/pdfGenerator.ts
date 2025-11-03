@@ -352,36 +352,28 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
             // For green blocks - only draw outer borders (no internal lines)
             doc.setDrawColor(colors.border[0], colors.border[1], colors.border[2]);
             
-            // Left border - thicker if day boundary, normal otherwise
+            // Left border - ONLY if day boundary
             if (trackIndexInDay === 0) {
               doc.setLineWidth(0.5); // Thicker for day boundary
-            } else {
-              // Check if left neighbor is also green
-              const leftIsGreen = trackIndexInDay > 0;
-              if (!leftIsGreen) {
-                doc.setLineWidth(0.2);
-              }
-            }
-            if (trackIndexInDay === 0 || trackIndexInDay > 0) {
               const leftX = data.cell.x;
               doc.line(leftX, data.cell.y, leftX, data.cell.y + data.cell.height);
             }
             
-            // Right border - thicker if day boundary
+            // Right border - ONLY if day boundary
             if (trackIndexInDay === SECTIONS.length - 1) {
               doc.setLineWidth(0.5); // Thicker for day boundary
               const rightX = data.cell.x + data.cell.width;
               doc.line(rightX, data.cell.y, rightX, data.cell.y + data.cell.height);
             }
             
-            // Top border - only if not green above
+            // Top border - only if first afternoon slot
             const isFirstAfternoonSlot = slot.start === "16:00";
             if (isFirstAfternoonSlot) {
               doc.setLineWidth(0.2);
               doc.line(data.cell.x, data.cell.y, data.cell.x + data.cell.width, data.cell.y);
             }
             
-            // Bottom border - only if not green below
+            // Bottom border - only if last afternoon slot
             const isLastAfternoonSlot = slot.start === "18:30";
             if (isLastAfternoonSlot) {
               doc.setLineWidth(0.2);
