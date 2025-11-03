@@ -433,9 +433,9 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         
         // Draw semi-transparent green rectangle
         doc.setFillColor(134, 239, 172);
-        doc.setGlobalAlpha(0.5);
+        doc.setGState(new doc.GState({ opacity: 0.5 }));
         doc.rect(x, y, width, height, "F");
-        doc.setGlobalAlpha(1.0);
+        doc.setGState(new doc.GState({ opacity: 1.0 }));
       }
     });
   }
