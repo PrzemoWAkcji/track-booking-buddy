@@ -192,7 +192,7 @@ export const WeeklySchedule = ({
 
             return (
               <tr key={slot.start} className="hover:bg-muted/50 transition-colors">
-                <td className="border p-2 text-xs font-medium whitespace-nowrap bg-muted/30">
+                <td className="border p-2 text-sm font-medium whitespace-nowrap bg-muted/30">
                   {slot.start} - {slot.end}
                 </td>
                 {rowCells}
