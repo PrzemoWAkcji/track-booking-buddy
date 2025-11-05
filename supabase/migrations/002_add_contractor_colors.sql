@@ -19,7 +19,12 @@ UPDATE contractors SET color = '#6ee7b7' WHERE name = 'Rugby Legia'; -- emerald-
 UPDATE contractors SET color = '#c4b5fd' WHERE name = 'FROGS'; -- violet-300
 UPDATE contractors SET color = '#fda4af' WHERE name = 'UKS Montgomery'; -- rose-300
 
+-- Update colors for abbreviated contractor names
+UPDATE contractors SET color = '#93c5fd' WHERE name = 'EP'; -- blue-300 (Endless Pain abbreviation)
+UPDATE contractors SET color = '#86efac' WHERE name = 'UM'; -- green-300 (UKS Montgomery abbreviation)
+
 -- Update special system contractors
+UPDATE contractors SET color = '#86efac' WHERE name = 'BLOKADA'; -- green-300 (system blocking)
 UPDATE contractors SET color = '#fbbf24' WHERE name = 'ZAMKNIĘTY'; -- amber-400
 UPDATE contractors SET color = '#fbbf24' WHERE name = 'ZAMKNIETY'; -- amber-400 (alternative spelling)
 
@@ -39,6 +44,9 @@ INSERT INTO contractors (name, category, color) VALUES
   ('Rugby Legia', 'Trening sportowy', '#6ee7b7'),
   ('FROGS', 'Trening sportowy', '#c4b5fd'),
   ('UKS Montgomery', 'Trening sportowy', '#fda4af'),
+  ('EP', 'Trening sportowy', '#93c5fd'),
+  ('UM', 'Trening sportowy', '#86efac'),
+  ('BLOKADA', 'Trening sportowy', '#86efac'),
   ('ZAMKNIĘTY', 'closed', '#fbbf24'),
   ('ZAMKNIETY', 'closed', '#fbbf24')
 ON CONFLICT (name) DO UPDATE SET color = EXCLUDED.color;
