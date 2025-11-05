@@ -4,7 +4,7 @@ import { pl } from "date-fns/locale";
 import { ReservationForm } from "@/components/ReservationForm";
 import { WeeklySchedule } from "@/components/WeeklySchedule";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Download, Calendar, History, Trash2, FileText, Shuffle, Undo } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Calendar, History, Trash2, FileText, Undo } from "lucide-react";
 import { Reservation, Contractor, DEFAULT_CONTRACTORS, FacilityType, FACILITY_CONFIGS, TIME_SLOTS } from "@/types/reservation";
 import { generateWeeklyPDF } from "@/utils/pdfGenerator";
 import { exportWeekToExcel, exportAllWeeksToExcel } from "@/utils/excelExporter";
@@ -20,9 +20,7 @@ const Index = () => {
     addReservation, 
     deleteReservation, 
     deleteAllReservations,
-    reorganizeTracksToConsecutive,
     undoReorganization,
-    isReorganizing,
     isUndoingReorganization,
     getAvailableTracks,
     checkConflicts,
@@ -317,22 +315,11 @@ const Index = () => {
             </Button>
 
             <Button
-              onClick={() => reorganizeTracksToConsecutive.mutate(facilityType)}
-              variant="outline"
-              size="sm"
-              title="Przestaw rezerwacje tak, aby tory były obok siebie"
-              disabled={isReorganizing || isUndoingReorganization}
-            >
-              <Shuffle className="mr-2 h-4 w-4" />
-              {isReorganizing ? "Reorganizacja..." : "Uporządkuj tory"}
-            </Button>
-
-            <Button
               onClick={() => undoReorganization.mutate(facilityType)}
               variant="outline"
               size="sm"
               title="Cofnij ostatnią reorganizację torów"
-              disabled={!hasUndoSnapshot(facilityType) || isReorganizing || isUndoingReorganization}
+              disabled={!hasUndoSnapshot(facilityType) || isUndoingReorganization}
             >
               <Undo className="mr-2 h-4 w-4" />
               {isUndoingReorganization ? "Cofanie..." : "Cofnij zmiany"}
