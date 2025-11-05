@@ -147,7 +147,7 @@ export const WeeklySchedule = ({
                         className={cn(
                           "w-full h-full flex items-center justify-center text-center font-medium relative min-h-[28px]",
                           reservation.isClosed 
-                            ? "bg-yellow-200 dark:bg-yellow-300 text-black"
+                            ? "bg-amber-400 dark:bg-amber-700 text-gray-900 dark:text-gray-100"
                             : contractorColors[reservation.contractor] ||
                               "bg-gray-300 dark:bg-gray-700"
                         )}
