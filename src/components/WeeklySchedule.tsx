@@ -45,6 +45,10 @@ export const WeeklySchedule = ({
     "Sword Athletics Club": "bg-yellow-300 dark:bg-yellow-900/30 border-yellow-400 dark:border-yellow-700",
     "Endless Pain": "bg-cyan-300 dark:bg-cyan-900/30 border-cyan-400 dark:border-cyan-700",
     "Run Club": "bg-lime-300 dark:bg-lime-900/30 border-lime-400 dark:border-lime-700",
+    // Rugby clubs
+    "Rugby Legia": "bg-emerald-300 dark:bg-emerald-900/30 border-emerald-400 dark:border-emerald-700",
+    "FROGS": "bg-violet-300 dark:bg-violet-900/30 border-violet-400 dark:border-violet-700",
+    "UKS Montgomery": "bg-rose-300 dark:bg-rose-900/30 border-rose-400 dark:border-rose-700",
   };
 
   return (
