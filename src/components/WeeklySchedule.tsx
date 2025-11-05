@@ -10,6 +10,7 @@ interface WeeklyScheduleProps {
   weekStart: Date;
   onDeleteReservation: (id: string) => void;
   facilityConfig: FacilityConfig;
+  contractorColors?: Record<string, string>; // hex color map from database
 }
 
 export const WeeklySchedule = ({
@@ -17,6 +18,7 @@ export const WeeklySchedule = ({
   weekStart,
   onDeleteReservation,
   facilityConfig,
+  contractorColors = {},
 }: WeeklyScheduleProps) => {
   const weekDays = useMemo(() => {
     const start = startOfWeek(weekStart, { weekStartsOn: 1 });
@@ -33,22 +35,24 @@ export const WeeklySchedule = ({
     });
   };
 
-  const contractorColors: Record<string, string> = {
-    "OKS SKRA": "bg-blue-300 dark:bg-blue-900/30 border-blue-400 dark:border-blue-700",
-    "KS CZEMPION": "bg-green-300 dark:bg-green-900/30 border-green-400 dark:border-green-700",
-    AKL: "bg-purple-300 dark:bg-purple-900/30 border-purple-400 dark:border-purple-700",
-    "Kamil Żewłakow": "bg-orange-300 dark:bg-orange-900/30 border-orange-400 dark:border-orange-700",
-    SGH: "bg-red-300 dark:bg-red-900/30 border-red-400 dark:border-red-700",
-    "Grupa biegowa Aktywna Warszawa": "bg-teal-300 dark:bg-teal-900/30 border-teal-400 dark:border-teal-700",
-    ZabieganeDni: "bg-pink-300 dark:bg-pink-900/30 border-pink-400 dark:border-pink-700",
-    "Adidas Runners": "bg-indigo-300 dark:bg-indigo-900/30 border-indigo-400 dark:border-indigo-700",
-    "Sword Athletics Club": "bg-yellow-300 dark:bg-yellow-900/30 border-yellow-400 dark:border-yellow-700",
-    "Endless Pain": "bg-cyan-300 dark:bg-cyan-900/30 border-cyan-400 dark:border-cyan-700",
-    "Run Club": "bg-lime-300 dark:bg-lime-900/30 border-lime-400 dark:border-lime-700",
-    // Rugby clubs
-    "Rugby Legia": "bg-emerald-300 dark:bg-emerald-900/30 border-emerald-400 dark:border-emerald-700",
-    "FROGS": "bg-violet-300 dark:bg-violet-900/30 border-violet-400 dark:border-violet-700",
-    "UKS Montgomery": "bg-rose-300 dark:bg-rose-900/30 border-rose-400 dark:border-rose-700",
+  // Helper to get contractor color style from hex color
+  const getContractorColorStyle = (contractorName: string): React.CSSProperties => {
+    const hexColor = contractorColors[contractorName];
+    if (hexColor) {
+      return {
+        backgroundColor: hexColor,
+        borderColor: hexColor,
+        borderWidth: '2px',
+        borderStyle: 'solid'
+      };
+    }
+    // Default gray color for contractors without assigned color
+    return {
+      backgroundColor: '#d1d5db',
+      borderColor: '#9ca3af',
+      borderWidth: '2px',
+      borderStyle: 'solid'
+    };
   };
 
   return (
@@ -148,13 +152,18 @@ export const WeeklySchedule = ({
                   >
                     {reservation && (
                       <div
-                        className={cn(
-                          "w-full h-full flex items-center justify-center text-center font-medium relative min-h-[28px]",
-                          reservation.isClosed 
-                            ? "bg-amber-400 dark:bg-amber-700 text-gray-900 dark:text-gray-100"
-                            : contractorColors[reservation.contractor] ||
-                              "bg-gray-300 dark:bg-gray-700"
-                        )}
+                        className="w-full h-full flex items-center justify-center text-center font-medium relative min-h-[28px]"
+                        style={
+                          reservation.isClosed
+                            ? {
+                                backgroundColor: '#fbbf24',
+                                borderColor: '#fbbf24',
+                                borderWidth: '2px',
+                                borderStyle: 'solid',
+                                color: '#111827'
+                              }
+                            : getContractorColorStyle(reservation.contractor)
+                        }
                       >
                         {(reservation.closedReason || reservation.contractor) && (
                           <div className="text-xs px-1 truncate">

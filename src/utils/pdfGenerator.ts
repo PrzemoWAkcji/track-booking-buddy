@@ -19,9 +19,27 @@ const POLISH_DAYS: Record<number, string> = {
   6: "SOBOTA",
 };
 
-// Helper function to get contractor color by name
-const getContractorColorByName = (contractorName: string): [number, number, number] => {
-  // First try direct match
+// Helper function to convert hex color to RGB tuple
+const hexToRgb = (hex: string): [number, number, number] => {
+  // Remove # if present
+  hex = hex.replace('#', '');
+  
+  // Parse hex values
+  const r = parseInt(hex.substring(0, 2), 16);
+  const g = parseInt(hex.substring(2, 4), 16);
+  const b = parseInt(hex.substring(4, 6), 16);
+  
+  return [r, g, b];
+};
+
+// Helper function to get contractor color by name with fallback to database colors
+const getContractorColorByName = (contractorName: string, colorMap: Record<string, string> = {}): [number, number, number] => {
+  // First try database color map
+  if (colorMap[contractorName]) {
+    return hexToRgb(colorMap[contractorName]);
+  }
+  
+  // Fallback to hardcoded colors
   if (CONTRACTOR_COLORS[contractorName]) {
     return CONTRACTOR_COLORS[contractorName];
   }
@@ -31,8 +49,13 @@ const getContractorColorByName = (contractorName: string): [number, number, numb
 };
 
 // Funkcja pomocnicza do znalezienia koloru kontrahenta
-const getContractorColor = (contractorName: string): [number, number, number] => {
-  // Najpierw próbujemy bezpośredniego dopasowania
+const getContractorColor = (contractorName: string, colorMap: Record<string, string> = {}): [number, number, number] => {
+  // Najpierw próbujemy mapę kolorów z bazy danych
+  if (colorMap[contractorName]) {
+    return hexToRgb(colorMap[contractorName]);
+  }
+  
+  // Fallback do hardcoded kolorów
   if (CONTRACTOR_COLORS[contractorName]) {
     return CONTRACTOR_COLORS[contractorName];
   }
@@ -95,7 +118,7 @@ const normalizeText = (text: string) => text.normalize("NFD").replace(/[\u0300-\
 
 const isClosedLabel = (text: string) => normalizeText(text).includes("ZAMKNIETY");
 
-export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, facilityConfig: FacilityConfig, isRodoVersion = false) => {
+export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, facilityConfig: FacilityConfig, isRodoVersion = false, colorMap: Record<string, string> = {}) => {
   try {
     console.log("Rozpoczęcie generowania PDF", { 
       reservationsCount: reservations.length,
@@ -415,7 +438,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
             color = CATEGORY_COLORS[category] || [220, 220, 220];
           } else {
             const isClosed = isClosedLabel(contractorName);
-            color = isClosed ? CONTRACTOR_COLORS["ZAMKNIETY"] : getContractorColor(contractorName);
+            color = isClosed ? CONTRACTOR_COLORS["ZAMKNIETY"] : getContractorColor(contractorName, colorMap);
           }
           
           doc.setFillColor(color[0], color[1], color[2]);
@@ -558,7 +581,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     
     // Add regular contractors
     uniqueContractors.forEach(contractor => {
-      const color = getContractorColorByName(contractor);
+      const color = getContractorColorByName(contractor, colorMap);
       legendEntries.push({ name: contractor, color });
     });
     

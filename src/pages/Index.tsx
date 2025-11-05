@@ -3,14 +3,16 @@ import { startOfWeek, addWeeks, subWeeks, format, addDays, endOfWeek, getDay } f
 import { pl } from "date-fns/locale";
 import { ReservationForm } from "@/components/ReservationForm";
 import { WeeklySchedule } from "@/components/WeeklySchedule";
+import { ContractorColorsPanel } from "@/components/ContractorColorsPanel";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Download, Calendar, History, Trash2, FileText, Undo } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Calendar, History, Trash2, FileText, Undo, Palette } from "lucide-react";
 import { Reservation, Contractor, DEFAULT_CONTRACTORS, FacilityType, FACILITY_CONFIGS, TIME_SLOTS } from "@/types/reservation";
 import { generateWeeklyPDF } from "@/utils/pdfGenerator";
 import { exportWeekToExcel, exportAllWeeksToExcel } from "@/utils/excelExporter";
 import { toast } from "sonner";
 import { useReservations } from "@/hooks/useReservations";
 import { useWeeklyArchive } from "@/hooks/useWeeklyArchive";
+import { useContractors } from "@/hooks/useContractors";
 
 const Index = () => {
   // Use Supabase-backed hooks
@@ -34,11 +36,18 @@ const Index = () => {
     deleteArchive
   } = useWeeklyArchive();
 
+  const {
+    contractors: dbContractors,
+    getColorMap,
+    isLoading: isContractorsLoading
+  } = useContractors();
+
   const [facilityType, setFacilityType] = useState<FacilityType>("track-6");
   const [contractors, setContractors] = useState<Contractor[]>(DEFAULT_CONTRACTORS);
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
   const [isRodoVersion, setIsRodoVersion] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
+  const [showColorsPanel, setShowColorsPanel] = useState(false);
   
   const facilityConfig = FACILITY_CONFIGS[facilityType];
   
@@ -152,6 +161,7 @@ const Index = () => {
     try {
       const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
       const filteredReservations = reservations.filter(r => r.facilityType === facilityType);
+      const colorMap = getColorMap();
       
       // Dodajemy więcej logów, aby zdiagnozować problem
       console.log("Generowanie PDF dla:", {
@@ -159,7 +169,8 @@ const Index = () => {
         facilityType,
         facilityConfig,
         isRodoVersion,
-        filteredReservationsCount: filteredReservations.length
+        filteredReservationsCount: filteredReservations.length,
+        colorMap
       });
       
       // Sprawdzamy, czy mamy jakieś rezerwacje
@@ -177,9 +188,9 @@ const Index = () => {
         };
         
         console.log("Dodajemy testową rezerwację:", testReservation);
-        generateWeeklyPDF([testReservation], weekStart, facilityConfig, isRodoVersion);
+        generateWeeklyPDF([testReservation], weekStart, facilityConfig, isRodoVersion, colorMap);
       } else {
-        generateWeeklyPDF(filteredReservations, weekStart, facilityConfig, isRodoVersion);
+        generateWeeklyPDF(filteredReservations, weekStart, facilityConfig, isRodoVersion, colorMap);
       }
       
       toast.success(`PDF ${isRodoVersion ? '(wersja RODO)' : ''} został wygenerowany`);
@@ -315,6 +326,15 @@ const Index = () => {
             </Button>
 
             <Button
+              onClick={() => setShowColorsPanel(!showColorsPanel)}
+              variant={showColorsPanel ? "default" : "outline"}
+              title="Zarządzaj kolorami wykonawców"
+            >
+              <Palette className="mr-2 h-4 w-4" />
+              Kolory
+            </Button>
+
+            <Button
               onClick={() => undoReorganization.mutate(facilityType)}
               variant="outline"
               size="sm"
@@ -409,12 +429,20 @@ const Index = () => {
           </div>
         )}
 
+        {/* Contractor Colors Management Panel */}
+        {showColorsPanel && (
+          <div className="max-w-6xl mx-auto">
+            <ContractorColorsPanel />
+          </div>
+        )}
+
         {/* Weekly Schedule */}
         <WeeklySchedule
           reservations={reservations.filter(r => r.facilityType === facilityType)}
           weekStart={weekStart}
           onDeleteReservation={handleDeleteReservation}
           facilityConfig={facilityConfig}
+          contractorColors={getColorMap()}
         />
 
         {/* Legend */}
