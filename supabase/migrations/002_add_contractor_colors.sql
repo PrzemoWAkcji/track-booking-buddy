@@ -18,6 +18,8 @@ UPDATE contractors SET color = '#bef264' WHERE name = 'Run Club'; -- lime-300
 UPDATE contractors SET color = '#6ee7b7' WHERE name = 'Rugby Legia'; -- emerald-300
 UPDATE contractors SET color = '#c4b5fd' WHERE name = 'FROGS'; -- violet-300
 UPDATE contractors SET color = '#fda4af' WHERE name = 'UKS Montgomery'; -- rose-300
+UPDATE contractors SET color = '#6ee7b7' WHERE name = 'SKRA Rugby'; -- emerald-300
+UPDATE contractors SET color = '#c4b5fd' WHERE name = 'FROGS Warszawa'; -- violet-300
 
 -- Update colors for abbreviated contractor names
 UPDATE contractors SET color = '#93c5fd' WHERE name = 'EP'; -- blue-300 (Endless Pain abbreviation)
@@ -44,6 +46,8 @@ INSERT INTO contractors (name, category, color) VALUES
   ('Rugby Legia', 'Trening sportowy', '#6ee7b7'),
   ('FROGS', 'Trening sportowy', '#c4b5fd'),
   ('UKS Montgomery', 'Trening sportowy', '#fda4af'),
+  ('SKRA Rugby', 'Trening sportowy', '#6ee7b7'),
+  ('FROGS Warszawa', 'Trening sportowy', '#c4b5fd'),
   ('EP', 'Trening sportowy', '#93c5fd'),
   ('UM', 'Trening sportowy', '#86efac'),
   ('BLOKADA', 'Trening sportowy', '#86efac'),
