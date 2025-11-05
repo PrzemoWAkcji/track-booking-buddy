@@ -147,6 +147,26 @@ export function useReservations(facilityType?: FacilityType) {
     },
   })
 
+  // Undo reorganization
+  const undoReorganizeMutation = useMutation({
+    mutationFn: (facilityTypeToUndo: FacilityType) => 
+      ReservationService.undoReorganization(facilityTypeToUndo),
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      toast({
+        title: 'Zmiany cofnięte',
+        description: `Przywrócono poprzedni układ torów (${count} rezerwacji)`,
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Błąd cofania zmian',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+
   return {
     // Data
     reservations,
@@ -161,6 +181,7 @@ export function useReservations(facilityType?: FacilityType) {
     deleteAllReservations: deleteAllMutation,
     migrateFromLocalStorage: migrateMutation,
     reorganizeTracksToConsecutive: reorganizeMutation,
+    undoReorganization: undoReorganizeMutation,
 
     // Mutation states
     isCreating: createMutation.isPending,
@@ -169,10 +190,13 @@ export function useReservations(facilityType?: FacilityType) {
     isDeletingAll: deleteAllMutation.isPending,
     isMigrating: migrateMutation.isPending,
     isReorganizing: reorganizeMutation.isPending,
+    isUndoingReorganization: undoReorganizeMutation.isPending,
 
     // Utilities - wrapped to provide simpler interface
     checkConflicts: (newReservation: Reservation) =>
       ReservationService.checkConflicts(newReservation, reservations),
+    hasUndoSnapshot: (facilityType: FacilityType) =>
+      ReservationService.hasUndoSnapshot(facilityType),
     getAvailableTracks: async (
       targetFacilityType: FacilityType,
       date: Date,

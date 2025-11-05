@@ -456,6 +456,72 @@ export class ReservationService {
   }
 
   /**
+   * Save snapshot of current track assignments before reorganization
+   */
+  private static saveReorganizeSnapshot(facilityType: FacilityType, reservations: Reservation[]): void {
+    const snapshot = {
+      facilityType,
+      timestamp: new Date().toISOString(),
+      reservations: reservations.map(r => ({
+        id: r.id,
+        tracks: [...r.tracks],
+        contractor: r.contractor,
+      }))
+    }
+    
+    const key = `track-reorganize-snapshot-${facilityType}`
+    localStorage.setItem(key, JSON.stringify(snapshot))
+    console.log(`Saved snapshot for ${facilityType}:`, snapshot.reservations.length, 'reservations')
+  }
+
+  /**
+   * Check if undo snapshot exists for facility type
+   */
+  static hasUndoSnapshot(facilityType: FacilityType): boolean {
+    const key = `track-reorganize-snapshot-${facilityType}`
+    return localStorage.getItem(key) !== null
+  }
+
+  /**
+   * Undo the last reorganization by restoring from snapshot
+   */
+  static async undoReorganization(facilityType: FacilityType): Promise<number> {
+    try {
+      const key = `track-reorganize-snapshot-${facilityType}`
+      const snapshotJson = localStorage.getItem(key)
+      
+      if (!snapshotJson) {
+        throw new Error('Brak zapisanego stanu do przywrócenia')
+      }
+
+      const snapshot = JSON.parse(snapshotJson)
+      
+      if (snapshot.facilityType !== facilityType) {
+        throw new Error('Nieprawidłowy typ obiektu w snapshot')
+      }
+
+      console.log(`Restoring ${snapshot.reservations.length} reservations from snapshot...`)
+      let restoredCount = 0
+
+      // Restore each reservation's tracks
+      for (const snapshotRes of snapshot.reservations) {
+        await this.updateReservation(snapshotRes.id, { tracks: snapshotRes.tracks })
+        restoredCount++
+      }
+
+      // Remove snapshot after successful restore
+      localStorage.removeItem(key)
+      console.log(`Undo complete: ${restoredCount} reservations restored`)
+      
+      return restoredCount
+
+    } catch (error) {
+      console.error('Failed to undo reorganization:', error)
+      throw error
+    }
+  }
+
+  /**
    * Reorganize all reservations to use consecutive tracks
    * Groups reservations by date/timeSlot and reassigns tracks so they are consecutive
    */
@@ -465,6 +531,9 @@ export class ReservationService {
       
       // Get all reservations for this facility
       const reservations = await this.getReservations(facilityType)
+      
+      // Save snapshot BEFORE making any changes
+      this.saveReorganizeSnapshot(facilityType, reservations)
       
       if (reservations.length === 0) {
         console.log('No reservations to reorganize')
