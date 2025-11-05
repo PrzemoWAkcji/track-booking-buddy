@@ -142,7 +142,7 @@ export const CONTRACTOR_CATEGORIES: Record<string, string> = {
 export const CATEGORY_COLORS: Record<string, [number, number, number]> = {
   "Grupa biegowa": [147, 197, 253], // blue-300
   "Trening sportowy": [134, 239, 172], // green-300
-  "Stadion zamkniety": [254, 240, 138], // yellow-200
+  "Stadion zamkniety": [251, 191, 36], // amber-400
 };
 
 export const CONTRACTOR_COLORS: Record<string, [number, number, number]> = {
@@ -159,6 +159,6 @@ export const CONTRACTOR_COLORS: Record<string, [number, number, number]> = {
   "Run Club": [190, 242, 100], // lime-300
   "EP": [147, 197, 253], // blue-300
   "UM": [134, 239, 172], // green-300
-  "ZAMKNIETY": [254, 240, 138], // yellow-200
+  "ZAMKNIETY": [251, 191, 36], // amber-400
   "BLOKADA": [134, 239, 172], // green-300
 };
