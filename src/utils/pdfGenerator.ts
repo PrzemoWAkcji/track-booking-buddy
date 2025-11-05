@@ -151,7 +151,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     lightGray: [250, 250, 250] as [number, number, number],
   };
 
-  doc.addImage(logo, "JPEG", 10, 8, 25, 25);
+  doc.addImage(logo, "JPEG", 10, 8, 23, 23);
 
   doc.setFontSize(10);
   doc.setFont("Roboto", "bold");
