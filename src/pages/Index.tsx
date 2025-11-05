@@ -444,39 +444,6 @@ const Index = () => {
           facilityConfig={facilityConfig}
           contractorColors={getColorMap()}
         />
-
-        {/* Legend */}
-        <div className="bg-card p-6 rounded-xl shadow-lg border">
-          <h3 className="font-semibold text-lg mb-4">Legenda kontrahentów:</h3>
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-            {contractors.map((contractor) => {
-              const colorMap: Record<string, string> = {
-                "OKS SKRA": "bg-blue-300 dark:bg-blue-900/30 border-blue-400 dark:border-blue-700",
-                "KS CZEMPION": "bg-green-300 dark:bg-green-900/30 border-green-400 dark:border-green-700",
-                "AKL": "bg-purple-300 dark:bg-purple-900/30 border-purple-400 dark:border-purple-700",
-                "Kamil Żewłakow": "bg-orange-300 dark:bg-orange-900/30 border-orange-400 dark:border-orange-700",
-                "SGH": "bg-red-300 dark:bg-red-900/30 border-red-400 dark:border-red-700",
-                "Grupa biegowa Aktywna Warszawa": "bg-teal-300 dark:bg-teal-900/30 border-teal-400 dark:border-teal-700",
-                "ZabieganeDni": "bg-pink-300 dark:bg-pink-900/30 border-pink-400 dark:border-pink-700",
-                "Adidas Runners": "bg-indigo-300 dark:bg-indigo-900/30 border-indigo-400 dark:border-indigo-700",
-                "Sword Athletics Club": "bg-yellow-300 dark:bg-yellow-900/30 border-yellow-400 dark:border-yellow-700",
-                "Endless Pain": "bg-cyan-300 dark:bg-cyan-900/30 border-cyan-400 dark:border-cyan-700",
-                "Run Club": "bg-lime-300 dark:bg-lime-900/30 border-lime-400 dark:border-lime-700",
-              };
-              
-              const color = colorMap[contractor.name] || "bg-gray-300 dark:bg-gray-700 border-gray-400 dark:border-gray-600";
-              
-              return (
-                <div
-                  key={contractor.id}
-                  className={`p-3 rounded-lg border text-sm font-medium ${color}`}
-                >
-                  {contractor.name}
-                </div>
-              );
-            })}
-          </div>
-        </div>
       </div>
     </div>
   );
