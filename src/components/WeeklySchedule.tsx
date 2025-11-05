@@ -107,14 +107,15 @@ export const WeeklySchedule = ({
                 if (reservation) {
                   for (let i = sectionIndex + 1; i < facilityConfig.sections.length; i++) {
                     const nextSection = facilityConfig.sections[i];
-                    if (reservation.tracks.includes(nextSection)) {
-                      const nextReservations = getReservationsForCell(day, slot.start, nextSection);
-                      if (nextReservations[0]?.id === reservation.id) {
-                        colspan++;
-                      } else {
-                        break;
-                      }
+                    
+                    // Find any reservation on the next track at this time
+                    const nextReservations = getReservationsForCell(day, slot.start, nextSection);
+                    
+                    // If next track has the same reservation (by ID), extend colspan
+                    if (nextReservations[0]?.id === reservation.id) {
+                      colspan++;
                     } else {
+                      // If next track has a different reservation or no reservation, stop merging
                       break;
                     }
                   }
