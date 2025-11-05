@@ -172,36 +172,47 @@ export function useReservations(facilityType?: FacilityType) {
         slot => slot.start >= startTime && slot.start < endTime
       );
       
-      // Find available tracks for all time slots
-      const availableTracksForAllSlots: number[] = [];
-      
-      for (let trackNum = 1; trackNum <= facilityConfig.sections.length; trackNum++) {
-        let isAvailableInAllSlots = true;
+      // Find CONSECUTIVE available tracks for all time slots
+      // Try each possible starting position for consecutive range
+      for (let startTrack = 1; startTrack <= facilityConfig.sections.length - trackCount + 1; startTrack++) {
+        const consecutiveTracks: number[] = [];
+        let allTracksAvailable = true;
         
-        for (const slot of newSlots) {
-          const occupiedInSlot = existingOnSameDay.some(existing => 
-            slot.start >= existing.startTime && 
-            slot.start < existing.endTime && 
-            existing.tracks.includes(trackNum)
-          );
+        // Check if trackCount consecutive tracks starting from startTrack are all available
+        for (let i = 0; i < trackCount; i++) {
+          const trackNum = startTrack + i;
+          let isAvailableInAllSlots = true;
           
-          if (occupiedInSlot) {
-            isAvailableInAllSlots = false;
+          // Check availability in all time slots
+          for (const slot of newSlots) {
+            const occupiedInSlot = existingOnSameDay.some(existing => 
+              slot.start >= existing.startTime && 
+              slot.start < existing.endTime && 
+              existing.tracks.includes(trackNum)
+            );
+            
+            if (occupiedInSlot) {
+              isAvailableInAllSlots = false;
+              break;
+            }
+          }
+          
+          if (!isAvailableInAllSlots) {
+            allTracksAvailable = false;
             break;
           }
+          
+          consecutiveTracks.push(trackNum);
         }
         
-        if (isAvailableInAllSlots) {
-          availableTracksForAllSlots.push(trackNum);
-        }
-        
-        // Stop if we have enough tracks
-        if (availableTracksForAllSlots.length === trackCount) {
-          break;
+        // If we found consecutive tracks, return them
+        if (allTracksAvailable && consecutiveTracks.length === trackCount) {
+          return consecutiveTracks;
         }
       }
       
-      return availableTracksForAllSlots;
+      // No consecutive tracks found - return empty array
+      return [];
     },
   }
 }
