@@ -454,4 +454,97 @@ export class ReservationService {
       throw error
     }
   }
+
+  /**
+   * Reorganize all reservations to use consecutive tracks
+   * Groups reservations by date/timeSlot and reassigns tracks so they are consecutive
+   */
+  static async reorganizeTracksToConsecutive(facilityType: FacilityType): Promise<number> {
+    try {
+      console.log(`Starting track reorganization for ${facilityType}...`)
+      
+      // Get all reservations for this facility
+      const reservations = await this.getReservations(facilityType)
+      
+      if (reservations.length === 0) {
+        console.log('No reservations to reorganize')
+        return 0
+      }
+
+      // Get facility config
+      const { FACILITY_CONFIGS } = await import('@/types/reservation')
+      const facilityConfig = FACILITY_CONFIGS[facilityType]
+      const totalTracks = facilityConfig.sections.length
+
+      // Group reservations by date + timeSlot
+      const groups = new Map<string, Reservation[]>()
+      
+      for (const reservation of reservations) {
+        const key = `${reservation.date.toDateString()}_${reservation.startTime}-${reservation.endTime}`
+        if (!groups.has(key)) {
+          groups.set(key, [])
+        }
+        groups.get(key)!.push(reservation)
+      }
+
+      let updatedCount = 0
+
+      // Process each group
+      for (const [key, groupReservations] of groups.entries()) {
+        // Sort reservations by contractor name for stable ordering
+        groupReservations.sort((a, b) => a.contractor.localeCompare(b.contractor))
+
+        let nextAvailableTrack = 1
+
+        for (const reservation of groupReservations) {
+          // Skip if closed - these should use all tracks
+          if (reservation.isClosed) {
+            // Ensure closed reservations use all tracks
+            if (reservation.tracks.length !== totalTracks) {
+              await this.updateReservation(reservation.id, {
+                tracks: facilityConfig.sections
+              })
+              updatedCount++
+            }
+            continue
+          }
+
+          const trackCount = reservation.tracks.length
+
+          // Check if we have enough space left
+          if (nextAvailableTrack + trackCount - 1 > totalTracks) {
+            console.warn(`Cannot fit reservation ${reservation.id} - not enough consecutive tracks left`)
+            continue
+          }
+
+          // Assign consecutive tracks
+          const newTracks: number[] = []
+          for (let i = 0; i < trackCount; i++) {
+            newTracks.push(nextAvailableTrack + i)
+          }
+
+          // Update only if tracks changed
+          const tracksChanged = 
+            newTracks.length !== reservation.tracks.length ||
+            !newTracks.every((track, idx) => track === reservation.tracks[idx])
+
+          if (tracksChanged) {
+            await this.updateReservation(reservation.id, { tracks: newTracks })
+            updatedCount++
+            console.log(`Updated ${reservation.contractor}: ${reservation.tracks} → ${newTracks}`)
+          }
+
+          // Move to next available track position
+          nextAvailableTrack += trackCount
+        }
+      }
+
+      console.log(`Reorganization complete: ${updatedCount} reservations updated`)
+      return updatedCount
+
+    } catch (error) {
+      console.error('Failed to reorganize tracks:', error)
+      throw error
+    }
+  }
 }

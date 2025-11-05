@@ -127,6 +127,26 @@ export function useReservations(facilityType?: FacilityType) {
     },
   })
 
+  // Reorganize tracks to be consecutive
+  const reorganizeMutation = useMutation({
+    mutationFn: (facilityTypeToReorganize: FacilityType) => 
+      ReservationService.reorganizeTracksToConsecutive(facilityTypeToReorganize),
+    onSuccess: (count) => {
+      queryClient.invalidateQueries({ queryKey: [QUERY_KEY] })
+      toast({
+        title: 'Reorganizacja zakończona',
+        description: `Zaktualizowano ${count} rezerwacji - tory są teraz ułożone obok siebie`,
+      })
+    },
+    onError: (error: Error) => {
+      toast({
+        title: 'Błąd reorganizacji',
+        description: error.message,
+        variant: 'destructive',
+      })
+    },
+  })
+
   return {
     // Data
     reservations,
@@ -140,6 +160,7 @@ export function useReservations(facilityType?: FacilityType) {
     deleteReservation: deleteMutation,
     deleteAllReservations: deleteAllMutation,
     migrateFromLocalStorage: migrateMutation,
+    reorganizeTracksToConsecutive: reorganizeMutation,
 
     // Mutation states
     isCreating: createMutation.isPending,
@@ -147,6 +168,7 @@ export function useReservations(facilityType?: FacilityType) {
     isDeleting: deleteMutation.isPending,
     isDeletingAll: deleteAllMutation.isPending,
     isMigrating: migrateMutation.isPending,
+    isReorganizing: reorganizeMutation.isPending,
 
     // Utilities - wrapped to provide simpler interface
     checkConflicts: (newReservation: Reservation) =>
