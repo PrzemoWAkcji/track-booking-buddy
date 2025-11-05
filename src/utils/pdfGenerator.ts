@@ -183,22 +183,23 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         });
 
         if (reservation) {
+          // Count consecutive tracks belonging to the same reservation
           let colSpan = 1;
           for (let i = sectionIndex + 1; i < SECTIONS.length; i++) {
             const nextSection = SECTIONS[i];
-            if (reservation.tracks.includes(nextSection)) {
-              const nextReservation = reservations.find((res) => {
-                if (!res.date || res.date.toDateString() !== day.toDateString()) return false;
-                if (!res.tracks.includes(nextSection)) return false;
-                return slot.start >= res.startTime && slot.start < res.endTime;
-              });
-              
-              if (nextReservation?.id === reservation.id) {
-                colSpan++;
-              } else {
-                break;
-              }
+            
+            // Find any reservation on the next track at this time
+            const nextReservation = reservations.find((res) => {
+              if (!res.date || res.date.toDateString() !== day.toDateString()) return false;
+              if (!res.tracks.includes(nextSection)) return false;
+              return slot.start >= res.startTime && slot.start < res.endTime;
+            });
+            
+            // If next track has the same reservation (by ID), extend colspan
+            if (nextReservation?.id === reservation.id) {
+              colSpan++;
             } else {
+              // If next track has a different reservation or no reservation, stop merging
               break;
             }
           }
@@ -243,31 +244,43 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
   });
 
   
+  // Adjust column widths based on facility type
+  let timeColumnWidth = 8;
+  let trackColumnWidth = 6;
+  
+  if (facilityConfig.id === "track-8") {
+    timeColumnWidth = 8;
+    trackColumnWidth = 4.5; // Narrower for 8 tracks to fit on page
+  } else if (facilityConfig.id === "rugby") {
+    timeColumnWidth = 12; // Wider time columns for rugby
+    trackColumnWidth = 16; // Much wider for rugby (only 2 sections, plenty of space)
+  }
+  
   // Generate column styles dynamically to ensure equal width for all track columns
   const columnStyles: any = {
     0: { 
-      cellWidth: 8,
+      cellWidth: timeColumnWidth,
       fontStyle: "bold",
       fontSize: 5,
       fillColor: colors.lightGray,
       textColor: colors.border,
     },
     1: {
-      cellWidth: 8,
+      cellWidth: timeColumnWidth,
       fontStyle: "bold",
       fontSize: 5,
       fillColor: colors.lightGray,
       textColor: colors.border,
     },
     [2 + (SECTIONS.length * 7)]: {
-      cellWidth: 8,
+      cellWidth: timeColumnWidth,
       fontStyle: "bold",
       fontSize: 5,
       fillColor: colors.lightGray,
       textColor: colors.border,
     },
     [2 + (SECTIONS.length * 7) + 1]: {
-      cellWidth: 8,
+      cellWidth: timeColumnWidth,
       fontStyle: "bold",
       fontSize: 5,
       fillColor: colors.lightGray,
@@ -276,9 +289,41 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
   };
   
   // Set equal width for all track columns (columns 2 to 2 + SECTIONS.length * 7 - 1)
-  const trackColumnWidth = 6;
   for (let i = 2; i < 2 + (SECTIONS.length * 7); i++) {
     columnStyles[i] = { cellWidth: trackColumnWidth };
+  }
+  
+  // Adjust font sizes, cell padding, and margins based on facility type
+  let bodyFontSize = 5;
+  let headFontSize = 5.5;
+  let cellPadding = 1;
+  let headCellPadding = 1.2;
+  let leftMargin = 5;
+  let rightMargin = 5;
+  
+  if (facilityConfig.id === "track-8") {
+    bodyFontSize = 4.5; // Slightly smaller font for 8 tracks
+    headFontSize = 5;
+    cellPadding = 0.8;
+    headCellPadding = 1;
+    leftMargin = 4; // Reduce margins to fit 8 tracks
+    rightMargin = 4;
+  } else if (facilityConfig.id === "rugby") {
+    bodyFontSize = 5.5; // Moderate font size for rugby to fit on one page
+    headFontSize = 6;
+    cellPadding = 0.8; // Reduced padding to fit on one page
+    headCellPadding = 1; // Reduced header padding
+    // Calculate margins to center table: A4 landscape = 297mm
+    // Rugby table width: 14 track cols * 16mm + 4 time cols * 12mm = 272mm
+    // Margins: (297 - 272) / 2 = 12.5mm per side
+    leftMargin = 12.5;
+    rightMargin = 12.5;
+  }
+  
+  // Adjust minCellHeight based on facility type
+  let minCellHeight = 3.5;
+  if (facilityConfig.id === "rugby") {
+    minCellHeight = 3.2; // Reduced to fit rugby on one page
   }
   
   autoTable(doc, {
@@ -287,13 +332,13 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     startY: 30,
     theme: "grid",
     styles: {
-      fontSize: 5,
-      cellPadding: 1,
+      fontSize: bodyFontSize,
+      cellPadding: cellPadding,
       lineWidth: 0.2,
       lineColor: colors.border,
       textColor: colors.headerText,
       font: "Roboto",
-      minCellHeight: 3.5,
+      minCellHeight: minCellHeight,
       halign: "center",
       valign: "middle",
       overflow: "linebreak",
@@ -304,12 +349,12 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       textColor: colors.headerText,
       fontStyle: "bold",
       halign: "center",
-      fontSize: 5.5,
-      cellPadding: 1.2,
+      fontSize: headFontSize,
+      cellPadding: headCellPadding,
       lineWidth: 0.2,
     },
     columnStyles,
-    margin: { top: 30, left: 5, right: 5, bottom: 5 },
+    margin: { top: 30, left: leftMargin, right: rightMargin, bottom: 5 },
     tableWidth: "auto",
     didDrawCell: (data) => {
       const totalColumns = 2 + (SECTIONS.length * 7) + 2;
