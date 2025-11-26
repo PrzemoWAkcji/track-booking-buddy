@@ -473,7 +473,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
             doc.text(contractorName, data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, {
               align: "center",
               baseline: "middle",
-              maxWidth: data.cell.width - 1,
+              maxWidth: data.cell.width - 0.5,
             });
           }
         } else {
