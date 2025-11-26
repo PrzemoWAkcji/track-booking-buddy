@@ -464,7 +464,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
             doc.setFontSize(6);
             doc.setFont("Roboto", "bold");
           } else {
-            doc.setFontSize(5);
+            doc.setFontSize(7);
             doc.setFont("Roboto", "normal");
           }
           
