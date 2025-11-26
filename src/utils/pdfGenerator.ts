@@ -464,8 +464,8 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
             doc.setFontSize(6);
             doc.setFont("Roboto", "bold");
           } else {
-            doc.setFontSize(7);
-            doc.setFont("Roboto", "normal");
+            doc.setFontSize(8);
+            doc.setFont("Roboto", "bold");
           }
           
           // Draw text for all cells in regular version, or only closed cells in RODO version
