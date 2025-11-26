@@ -573,16 +573,18 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     // For non-RODO version, show all contractors with their colors
     const finalY = (doc as any).lastAutoTable.finalY || 30;
     
-    const uniqueContractors = Array.from(new Set(reservations.map(r => r.contractor)));
+    const uniqueContractors = Array.from(new Set(reservations.filter(r => !r.isClosed).map(r => r.contractor)));
     const hasClosedReservations = reservations.some(r => r.isClosed);
     
     // Build legend entries
     const legendEntries: Array<{ name: string; color: [number, number, number] }> = [];
     
-    // Add regular contractors
+    // Add regular contractors (only those with active reservations)
     uniqueContractors.forEach(contractor => {
-      const color = getContractorColorByName(contractor, colorMap);
-      legendEntries.push({ name: contractor, color });
+      if (contractor && contractor.trim()) {
+        const color = getContractorColorByName(contractor, colorMap);
+        legendEntries.push({ name: contractor, color });
+      }
     });
     
     // Add closed stadium entry if there are any closed reservations
