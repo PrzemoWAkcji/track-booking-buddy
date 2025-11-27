@@ -464,16 +464,23 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
             doc.setFontSize(6);
             doc.setFont("Roboto", "bold");
           } else {
-            doc.setFontSize(7);
+            doc.setFontSize(8);
             doc.setFont("Roboto", "bold");
           }
           
           // Draw text for all cells in regular version, or only closed cells in RODO version
           if (!isRodoVersion || isClosed) {
-            doc.text(contractorName, data.cell.x + data.cell.width / 2, data.cell.y + data.cell.height / 2, {
-              align: "center",
-              baseline: "middle",
-              maxWidth: data.cell.width - 0.5,
+            const maxWidth = data.cell.width - 1;
+            const lines = doc.splitTextToSize(contractorName, maxWidth);
+            const lineHeight = doc.getTextDimensions("M").h * 1.2;
+            const totalHeight = lines.length * lineHeight;
+            const startY = data.cell.y + (data.cell.height - totalHeight) / 2 + lineHeight / 2;
+            
+            lines.forEach((line: string, index: number) => {
+              doc.text(line, data.cell.x + data.cell.width / 2, startY + index * lineHeight, {
+                align: "center",
+                baseline: "middle",
+              });
             });
           }
         } else {
