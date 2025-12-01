@@ -569,6 +569,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     }
     
     // Add footer text
+    doc.setTextColor(0, 0, 0);
     doc.setFontSize(7);
     doc.setFont("Roboto", "italic");
     doc.text(
@@ -613,9 +614,47 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       legendEntries.push({ name: "Stadion zamknięty", color: closedColor });
     }
     
-    if (legendEntries.length > 0) {
+    // For 8-track stadium with no reservations, show only the note and footer
+    if (facilityConfig.id === "track-8" && legendEntries.length === 0) {
+      let legendY = finalY + 10;
+      
+      // Add special note for 8-track stadium
+      doc.setFontSize(12);
+      doc.setFont("Roboto", "bold");
+      doc.setTextColor(255, 0, 0);
+      doc.text(
+        'Stadion czynny jest do zmierzchu.',
+        10,
+        legendY
+      );
+      legendY += 7;
+      
+      // Add footer text
+      doc.setTextColor(0, 0, 0);
+      doc.setFontSize(7);
+      doc.setFont("Roboto", "italic");
+      doc.text(
+        'Kierownictwo Ośrodka "Nowa Skra" zastrzega sobie prawo do dokonywania zmian w harmonogramach.',
+        10,
+        legendY + 5
+      );
+      
+      doc.setFontSize(6);
+      doc.setFont("Roboto", "normal");
+      doc.text(
+        'Dodatkowe informacje, w tym aktualny harmonogram dostępny jest na stronie www Ośrodka:',
+        10,
+        legendY + 10
+      );
+      doc.text(
+        'https://piuw.um.warszawa.pl/waw/aktywna-warszawa/osrodek-nowa-skra',
+        10,
+        legendY + 14
+      );
+    } else if (legendEntries.length > 0) {
       doc.setFontSize(8);
       doc.setFont("Roboto", "bold");
+      doc.setTextColor(0, 0, 0);
       doc.text("Legenda:", 10, finalY + 10);
       
       let legendY = finalY + 15;
@@ -659,6 +698,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       }
       
       // Add footer text for non-RODO version
+      doc.setTextColor(0, 0, 0);
       doc.setFontSize(7);
       doc.setFont("Roboto", "italic");
       doc.text(
