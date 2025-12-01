@@ -557,9 +557,9 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     
     // Add special note for 8-track stadium in RODO version
     if (facilityConfig.id === "track-8") {
-      doc.setFontSize(9);
+      doc.setFontSize(12);
       doc.setFont("Roboto", "bold");
-      doc.setTextColor(0, 0, 0);
+      doc.setTextColor(255, 0, 0);
       doc.text(
         'Stadion czynny jest do zmierzchu.',
         10,
@@ -647,9 +647,9 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       
       // Add special note for 8-track stadium
       if (facilityConfig.id === "track-8") {
-        doc.setFontSize(9);
+        doc.setFontSize(12);
         doc.setFont("Roboto", "bold");
-        doc.setTextColor(0, 0, 0);
+        doc.setTextColor(255, 0, 0);
         doc.text(
           'Stadion czynny jest do zmierzchu.',
           10,
