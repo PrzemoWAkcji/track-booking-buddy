@@ -555,6 +555,19 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       legendY += spacing;
     });
     
+    // Add special note for 8-track stadium in RODO version
+    if (facilityConfig.id === "track-8") {
+      doc.setFontSize(9);
+      doc.setFont("Roboto", "bold");
+      doc.setTextColor(0, 0, 0);
+      doc.text(
+        'Stadion czynny jest do zmierzchu.',
+        10,
+        legendY + 5
+      );
+      legendY += 7;
+    }
+    
     // Add footer text
     doc.setFontSize(7);
     doc.setFont("Roboto", "italic");
@@ -631,6 +644,19 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
           legendX += 60;
         }
       });
+      
+      // Add special note for 8-track stadium
+      if (facilityConfig.id === "track-8") {
+        doc.setFontSize(9);
+        doc.setFont("Roboto", "bold");
+        doc.setTextColor(0, 0, 0);
+        doc.text(
+          'Stadion czynny jest do zmierzchu.',
+          10,
+          legendY + 5
+        );
+        legendY += 7;
+      }
       
       // Add footer text for non-RODO version
       doc.setFontSize(7);
