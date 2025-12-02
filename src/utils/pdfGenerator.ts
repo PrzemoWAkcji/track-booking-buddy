@@ -396,7 +396,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
           const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
           const isAfternoon = slot.start >= "16:00" && slot.start < "19:00";
           const isFirstTrack = trackIndexInDay === 0;
-          const isLastTrack = trackIndexInDay === SECTIONS.length - 1;
+          const isLastTrack = trackIndexInDay === 2; // Changed from SECTIONS.length - 1 to 2 (track 3, 0-indexed)
           const isFirstSlot = slot.start === "16:00";
           const isLastSlot = slot.start === "18:30";
           
