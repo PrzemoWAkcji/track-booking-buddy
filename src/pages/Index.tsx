@@ -432,7 +432,7 @@ const Index = () => {
         {/* Contractor Colors Management Panel */}
         {showColorsPanel && (
           <div className="max-w-6xl mx-auto">
-            <ContractorColorsPanel />
+            <ContractorColorsPanel reservations={reservations.filter(r => r.facilityType === facilityType)} />
           </div>
         )}
 

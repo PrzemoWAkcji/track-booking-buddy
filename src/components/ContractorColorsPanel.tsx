@@ -11,6 +11,11 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Palette, X, Check } from "lucide-react"
 import { ScrollArea } from "@/components/ui/scroll-area"
+import { Reservation } from "@/types/reservation"
+
+interface ContractorColorsPanelProps {
+  reservations?: Reservation[]
+}
 
 // Predefined color palette with Tailwind colors (hex values)
 const COLOR_PALETTE = [
@@ -32,10 +37,16 @@ const COLOR_PALETTE = [
   { name: "Szary", hex: "#d1d5db" },          // gray-300
 ]
 
-export function ContractorColorsPanel() {
+export function ContractorColorsPanel({ reservations = [] }: ContractorColorsPanelProps) {
   const { contractors, isLoading, updateContractorColor, isUpdating } = useContractors()
   const [editingId, setEditingId] = useState<string | null>(null)
   const [selectedColor, setSelectedColor] = useState<string>("")
+
+  const contractorsWithReservations = new Set(
+    reservations
+      .filter(r => r.contractor && r.contractor !== "ZAMKNIĘTY" && r.contractor !== "Brak rezerwacji")
+      .map(r => r.contractor)
+  )
 
   const handleStartEdit = (contractorId: string, currentColor: string) => {
     setEditingId(contractorId)
@@ -71,9 +82,10 @@ export function ContractorColorsPanel() {
     )
   }
 
-  // Filter out system contractors
   const editableContractors = contractors.filter(
-    c => c.name !== "Brak rezerwacji" && c.name !== "ZAMKNIĘTY"
+    c => c.name !== "Brak rezerwacji" && 
+         c.name !== "ZAMKNIĘTY" && 
+         contractorsWithReservations.has(c.name)
   )
 
   return (
