@@ -266,17 +266,6 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
     return row;
   });
 
-  const getReservedTracksInTimeSlot = (day: Date, startTime: string, endTime: string) => {
-    const reservedTracks = new Set<number>();
-    reservations.forEach(res => {
-      if (!res.date || res.date.toDateString() !== day.toDateString()) return;
-      if (res.startTime < endTime && res.endTime > startTime) {
-        res.tracks.forEach(track => reservedTracks.add(track));
-      }
-    });
-    return Array.from(reservedTracks);
-  };
-
   
   // Adjust column widths based on facility type
   let timeColumnWidth = 8;
@@ -509,37 +498,23 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
   if (isRodoVersion && facilityConfig.id === "track-6" && (doc as any).rodoGreenBlocks) {
     const blocks = (doc as any).rodoGreenBlocks;
     
-    weekDays.forEach((day, dayIndex) => {
-      const dayOfWeek = getDay(day);
-      const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-      
-      if (!isWeekday) return;
-      
-      const reservedTracks = getReservedTracksInTimeSlot(day, "16:00", "19:00");
-      const reservedCount = reservedTracks.length;
-      
-      const startBlock = blocks.find((b: any) => b.dayIndex === dayIndex && b.isStart);
-      const endBlock = blocks.find((b: any) => b.dayIndex === dayIndex && b.isEnd);
-      
-      if (!startBlock || !endBlock) return;
-      
-      const trackWidth = (endBlock.x - startBlock.x) / SECTIONS.length;
-      let x: number;
-      let width: number;
-      
-      if (reservedCount > 3) {
-        x = startBlock.x;
-        width = endBlock.x - startBlock.x;
-      } else {
-        x = startBlock.x + (3 * trackWidth);
-        width = 3 * trackWidth;
+    const blocksByDay: { [key: number]: { start?: any; end?: any } } = {};
+    blocks.forEach((block: any) => {
+      if (!blocksByDay[block.dayIndex]) blocksByDay[block.dayIndex] = {};
+      if (block.isStart) blocksByDay[block.dayIndex].start = block;
+      if (block.isEnd) blocksByDay[block.dayIndex].end = block;
+    });
+    
+    Object.entries(blocksByDay).forEach(([dayIndex, coords]: [string, any]) => {
+      if (coords.start && coords.end) {
+        const x = coords.start.x;
+        const y = coords.start.y;
+        const width = coords.end.x - coords.start.x;
+        const height = coords.end.y - coords.start.y;
+        
+        doc.setFillColor(134, 239, 172);
+        doc.rect(x, y, width, height, "F");
       }
-      
-      const y = startBlock.y;
-      const height = endBlock.y - startBlock.y;
-      
-      doc.setFillColor(134, 239, 172);
-      doc.rect(x, y, width, height, "F");
     });
   }
 
