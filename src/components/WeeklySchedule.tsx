@@ -4,6 +4,7 @@ import { pl } from "date-fns/locale";
 import { Reservation, TIME_SLOTS, FacilityConfig } from "@/types/reservation";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 interface WeeklyScheduleProps {
   reservations: Reservation[];
@@ -151,37 +152,44 @@ export const WeeklySchedule = ({
                     colSpan={colspan}
                   >
                     {reservation && (
-                      <div
-                        className="w-full h-full flex items-center justify-center text-center font-medium relative min-h-[28px]"
-                        style={
-                          reservation.isClosed
-                            ? {
-                                backgroundColor: '#fbbf24',
-                                borderColor: '#fbbf24',
-                                borderWidth: '2px',
-                                borderStyle: 'solid',
-                                color: '#111827'
-                              }
-                            : getContractorColorStyle(reservation.contractor)
-                        }
-                      >
-                        {(reservation.closedReason || reservation.contractor) && (
-                          <div className="text-xs px-1 truncate">
-                            {reservation.isClosed 
-                              ? reservation.closedReason
-                              : reservation.contractor
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div
+                            className="w-full h-full flex items-center justify-center text-center font-medium relative min-h-[28px] cursor-pointer"
+                            style={
+                              reservation.isClosed
+                                ? {
+                                    backgroundColor: '#fbbf24',
+                                    borderColor: '#fbbf24',
+                                    borderWidth: '2px',
+                                    borderStyle: 'solid',
+                                    color: '#111827'
+                                  }
+                                : getContractorColorStyle(reservation.contractor)
                             }
+                          >
+                            {(reservation.closedReason || reservation.contractor) && (
+                              <div className="text-xs px-1 truncate">
+                                {reservation.isClosed 
+                                  ? reservation.closedReason
+                                  : reservation.contractor
+                                }
+                              </div>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="absolute -top-1 -right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive hover:bg-destructive/90 text-destructive-foreground"
+                              onClick={() => onDeleteReservation(reservation.id)}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
                           </div>
-                        )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="absolute -top-1 -right-1 h-5 w-5 opacity-0 group-hover:opacity-100 transition-opacity bg-destructive hover:bg-destructive/90 text-destructive-foreground"
-                          onClick={() => onDeleteReservation(reservation.id)}
-                        >
-                          <Trash2 className="h-3 w-3" />
-                        </Button>
-                      </div>
+                        </TooltipTrigger>
+                        <TooltipContent className="bg-slate-900 text-white font-semibold">
+                          {reservation.startTime} - {reservation.endTime}
+                        </TooltipContent>
+                      </Tooltip>
                     )}
                   </td>
                 );
