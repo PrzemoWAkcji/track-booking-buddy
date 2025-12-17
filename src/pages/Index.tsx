@@ -5,13 +5,11 @@ import { ReservationForm } from "@/components/ReservationForm";
 import { WeeklySchedule } from "@/components/WeeklySchedule";
 import { ContractorColorsPanel } from "@/components/ContractorColorsPanel";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Download, Calendar, History, Trash2, FileText, Undo, Palette } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Calendar, Trash2, Undo, Palette } from "lucide-react";
 import { Reservation, Contractor, DEFAULT_CONTRACTORS, FacilityType, FACILITY_CONFIGS, TIME_SLOTS } from "@/types/reservation";
 import { generateWeeklyPDF } from "@/utils/pdfGenerator";
-import { exportWeekToExcel, exportAllWeeksToExcel } from "@/utils/excelExporter";
 import { toast } from "sonner";
 import { useReservations } from "@/hooks/useReservations";
-import { useWeeklyArchive } from "@/hooks/useWeeklyArchive";
 import { useContractors } from "@/hooks/useContractors";
 
 const Index = () => {
@@ -30,13 +28,6 @@ const Index = () => {
   } = useReservations();
 
   const {
-    archives: weeklyArchive,
-    isLoading: isArchiveLoading,
-    saveArchive,
-    deleteArchive
-  } = useWeeklyArchive();
-
-  const {
     contractors: dbContractors,
     getColorMap,
     isLoading: isContractorsLoading
@@ -46,46 +37,11 @@ const Index = () => {
   const [contractors, setContractors] = useState<Contractor[]>(DEFAULT_CONTRACTORS);
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
   const [isRodoVersion, setIsRodoVersion] = useState(false);
-  const [showArchive, setShowArchive] = useState(false);
   const [showColorsPanel, setShowColorsPanel] = useState(false);
   const [maskedTracks, setMaskedTracks] = useState<number[]>([]);
   
   const facilityConfig = FACILITY_CONFIGS[facilityType];
   
-  const saveWeekToArchive = () => {
-    const weekStart = startOfWeek(currentWeek, { weekStartsOn: 1 });
-    const weekEnd = endOfWeek(currentWeek, { weekStartsOn: 1 });
-    const weekStartStr = format(weekStart, "yyyy-MM-dd");
-    const weekEndStr = format(weekEnd, "yyyy-MM-dd");
-    
-    const weekReservations = reservations.filter(r => r.facilityType === facilityType);
-    
-    saveArchive.mutate({
-      weekStart: weekStartStr,
-      weekEnd: weekEndStr,
-      facilityType,
-      reservations: weekReservations,
-    });
-  };
-
-  const loadWeekFromArchive = (entry: typeof weeklyArchive[0]) => {
-    // Convert archived reservations (may have date as string) to proper format
-    const reservationsWithDates = entry.reservations.map(res => ({
-      ...res,
-      date: typeof res.date === 'string' ? new Date(res.date) : res.date
-    }));
-    
-    // Add all archived reservations to current reservations
-    reservationsWithDates.forEach(res => {
-      addReservation.mutate(res);
-    });
-    
-    const weekStart = new Date(entry.weekStart);
-    setCurrentWeek(weekStart);
-    setFacilityType(entry.facilityType);
-    toast.success(`Załadowano harmonogram z ${format(new Date(entry.weekStart), "dd.MM.yyyy", { locale: pl })}`);
-  };
-
   const handleAddReservations = async (newReservations: Omit<Reservation, "id" | "facilityType">[]) => {
     const processedReservations: Omit<Reservation, "id" | "facilityType">[] = [];
     const conflicts: string[] = [];
@@ -332,24 +288,6 @@ const Index = () => {
             </Button>
 
             <Button
-              onClick={saveWeekToArchive}
-              variant="outline"
-              title="Zapisz bieżący tydzień do archiwum"
-            >
-              <Download className="mr-2 h-4 w-4" />
-              Zapisz tydzień
-            </Button>
-
-            <Button
-              onClick={() => setShowArchive(!showArchive)}
-              variant="outline"
-              title="Przeglądaj wcześniejsze tygodnie"
-            >
-              <History className="mr-2 h-4 w-4" />
-              Archiwum ({weeklyArchive.length})
-            </Button>
-
-            <Button
               onClick={() => setShowColorsPanel(!showColorsPanel)}
               variant={showColorsPanel ? "default" : "outline"}
               title="Zarządzaj kolorami wykonawców"
@@ -379,79 +317,6 @@ const Index = () => {
             </Button>
           </div>
         </div>
-
-        {/* Weekly Archive */}
-        {showArchive && weeklyArchive.length > 0 && (
-          <div className="max-w-6xl mx-auto bg-card p-4 rounded-xl shadow-lg border">
-            <div className="flex justify-between items-center mb-4">
-              <h3 className="font-semibold text-lg">Archiwum harmonogramów tygodniowych:</h3>
-              <Button
-                onClick={() => {
-                  exportAllWeeksToExcel(weeklyArchive);
-                  toast.success("Całe archiwum zostało wyeksportowane");
-                }}
-                variant="outline"
-                size="sm"
-                title="Exportuj całe archiwum do jednego pliku"
-              >
-                <FileText className="mr-2 h-4 w-4" />
-                Exportuj wszystko
-              </Button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {weeklyArchive.map((entry, index) => {
-                const weekEnd = addDays(new Date(entry.weekStart), 6);
-                const dateRange = `${format(new Date(entry.weekStart), "dd.MM")} - ${format(weekEnd, "dd.MM.yyyy")}`;
-                const facilityName = FACILITY_CONFIGS[entry.facilityType].name;
-                
-                return (
-                  <div key={index} className="border rounded-lg p-4 bg-muted/30 hover:bg-muted/50 transition-colors">
-                    <div className="flex justify-between items-start mb-3">
-                      <div>
-                        <p className="text-sm font-medium">{dateRange}</p>
-                        <p className="text-xs text-muted-foreground">{facilityName}</p>
-                        <p className="text-xs text-muted-foreground">Zapisano: {entry.savedAt}</p>
-                        <p className="text-xs font-medium mt-1">{entry.reservations.length} rezerwacji</p>
-                      </div>
-                      <div className="flex gap-2">
-                        <Button
-                          onClick={() => {
-                            exportWeekToExcel(entry.weekStart, entry.facilityType, entry.reservations, facilityName);
-                            toast.success("Tydzień został wyeksportowany");
-                          }}
-                          size="sm"
-                          variant="outline"
-                          title="Exportuj ten tydzień do pliku"
-                        >
-                          <FileText className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          onClick={() => loadWeekFromArchive(entry)}
-                          size="sm"
-                          variant="default"
-                        >
-                          Załaduj
-                        </Button>
-                      </div>
-                    </div>
-                    
-                    <div className="text-xs space-y-1 max-h-40 overflow-y-auto border-t pt-3">
-                      {entry.reservations.length > 0 ? (
-                        entry.reservations.map((res, rIdx) => (
-                          <div key={rIdx} className="p-2 bg-background rounded text-muted-foreground">
-                            <span className="font-medium">{res.contractor}</span> - {format(res.date, "dd.MM")} {res.startTime}-{res.endTime}
-                          </div>
-                        ))
-                      ) : (
-                        <p className="text-muted-foreground italic">Brak rezerwacji</p>
-                      )}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
 
         {/* Contractor Colors Management Panel */}
         {showColorsPanel && (
