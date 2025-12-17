@@ -5,7 +5,6 @@ import { Reservation, TIME_SLOTS, FacilityConfig, CONTRACTOR_COLORS, CONTRACTOR_
 import "jspdf-autotable";
 import logo from "@/assets/aktywna-warszawa-logo.jpg";
 
-// Dodajemy polskie czcionki
 import { normal as robotoNormalFont, bold as robotoBoldFont, italics as robotoItalicFont, bolditalics as robotoBoldItalicFont } from "roboto-base64";
 
 // Polish day names mapping
@@ -118,7 +117,7 @@ const normalizeText = (text: string) => text.normalize("NFD").replace(/[\u0300-\
 
 const isClosedLabel = (text: string) => normalizeText(text).includes("ZAMKNIETY");
 
-export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, facilityConfig: FacilityConfig, isRodoVersion = false, colorMap: Record<string, string> = {}, maskedTracks: Array<{day: number, track: number}> = []) => {
+export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, facilityConfig: FacilityConfig, isRodoVersion = false, colorMap: Record<string, string> = {}, maskedTracks: Array<{day: number, track: number, timeSlotStart: string}> = []) => {
   try {
     console.log("Rozpoczęcie generowania PDF", { 
       reservationsCount: reservations.length,
@@ -392,7 +391,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         const dayOfWeek = getDay(day);
         const track = SECTIONS[trackIndexInDay];
         
-        if (maskedTracks.some(m => m.day === dayIndex && m.track === track)) {
+        if (maskedTracks.some(m => m.day === dayIndex && m.track === track && m.timeSlotStart === slot.start)) {
           doc.setFillColor(180, 180, 180);
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
           doc.setDrawColor(0, 0, 0);

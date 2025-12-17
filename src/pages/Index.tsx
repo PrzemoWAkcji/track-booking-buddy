@@ -5,7 +5,7 @@ import { ReservationForm } from "@/components/ReservationForm";
 import { WeeklySchedule } from "@/components/WeeklySchedule";
 import { ContractorColorsPanel } from "@/components/ContractorColorsPanel";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Download, Calendar, Trash2, Undo, Palette } from "lucide-react";
+import { ChevronLeft, ChevronRight, Download, Calendar, Trash2, Undo, Palette, X } from "lucide-react";
 import { Reservation, Contractor, DEFAULT_CONTRACTORS, FacilityType, FACILITY_CONFIGS, TIME_SLOTS } from "@/types/reservation";
 import { generateWeeklyPDF } from "@/utils/pdfGenerator";
 import { toast } from "sonner";
@@ -38,7 +38,11 @@ const Index = () => {
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
   const [isRodoVersion, setIsRodoVersion] = useState(false);
   const [showColorsPanel, setShowColorsPanel] = useState(false);
-  const [maskedTracks, setMaskedTracks] = useState<Array<{day: number, track: number}>>([]);
+  const [maskedTracks, setMaskedTracks] = useState<Array<{day: number, track: number, timeSlotStart: string}>>([]);
+  const [showMaskingDropdown, setShowMaskingDropdown] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<number>(0);
+  const [selectedTrack, setSelectedTrack] = useState<number>(1);
+  const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("07:00");
   
   const facilityConfig = FACILITY_CONFIGS[facilityType];
   
@@ -254,94 +258,121 @@ const Index = () => {
               </label>
             </div>
 
-            <div className="flex items-center gap-2 border-l pl-4">
-              <span className="text-xs text-muted-foreground font-semibold">Zasłoń (dzień/tor):</span>
-              <div className="space-y-2">
-                <div className="flex gap-1 flex-wrap">
-                  {Array.from({length: 7}, (_, i) => {
-                    const dayNames = ["Pon", "Wto", "Śro", "Czw", "Pią", "Sob", "Nie"];
-                    return (
-                      <button
-                        key={`day-${i}`}
-                        onClick={() => {
-                          setMaskedTracks(prev => {
-                            const hasDay = prev.some(m => m.day === i);
-                            if (hasDay) {
-                              return prev.filter(m => m.day !== i);
-                            } else {
-                              return [...prev, ...facilityConfig.sections.map(track => ({day: i, track}))];
-                            }
-                          });
-                        }}
-                        title={`Zaznacz/odznacz wszystkie tory w ${dayNames[i]}`}
-                        className={`px-2 py-1 rounded border text-xs font-semibold transition-colors ${
-                          facilityConfig.sections.every(track => 
-                            maskedTracks.some(m => m.day === i && m.track === track)
-                          )
-                            ? 'bg-primary text-primary-foreground border-primary'
-                            : 'bg-muted border-border hover:bg-muted/80'
-                        }`}
+            <div className="flex items-center gap-2 border-l pl-4 relative">
+              <div className="relative">
+                <button
+                  onClick={() => setShowMaskingDropdown(!showMaskingDropdown)}
+                  className="px-3 py-2 rounded border bg-muted border-border hover:bg-muted/80 text-sm font-semibold transition-colors"
+                >
+                  Zasłoń ({maskedTracks.length})
+                </button>
+                
+                {showMaskingDropdown && (
+                  <div className="absolute top-full left-0 mt-2 bg-white border rounded-lg shadow-lg z-20 p-4 space-y-3 w-80">
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-gray-700">Dzień:</label>
+                      <select
+                        value={selectedDay}
+                        onChange={(e) => setSelectedDay(Number(e.target.value))}
+                        className="w-full px-2 py-1 border rounded text-sm"
                       >
-                        {dayNames[i]}
-                      </button>
-                    );
-                  })}
-                </div>
-                <div className="flex gap-1 flex-wrap">
-                  {facilityConfig.sections.map((track) => (
-                    <div key={`track-selector-${track}`} className="relative group">
-                      <button
-                        onClick={() => {
-                          setMaskedTracks(prev => {
-                            const allDaysSelected = prev.filter(m => m.track === track).length === 7;
-                            if (allDaysSelected) {
-                              return prev.filter(m => m.track !== track);
-                            } else {
-                              const newMasks = Array.from({length: 7}, (_, i) => ({day: i, track}));
-                              const filtered = prev.filter(m => m.track !== track);
-                              return [...filtered, ...newMasks];
-                            }
-                          });
-                        }}
-                        title={`Zaznacz/odznacz tor ${track} dla wszystkich dni`}
-                        className={`w-8 h-8 rounded border text-xs font-semibold transition-colors ${
-                          Array.from({length: 7}).every((_, i) =>
-                            maskedTracks.some(m => m.day === i && m.track === track)
-                          )
-                            ? 'bg-blue-500 text-white border-blue-500'
-                            : 'bg-muted border-border hover:bg-muted/80'
-                        }`}
-                      >
-                        T{track}
-                      </button>
-                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:flex gap-1 bg-white p-2 rounded shadow-lg z-10 border whitespace-nowrap flex-col">
-                        {Array.from({length: 7}, (_, i) => {
-                          const dayNames = ["Pon", "Wto", "Śro", "Czw", "Pią", "Sob", "Nie"];
-                          const isSelected = maskedTracks.some(m => m.day === i && m.track === track);
-                          return (
-                            <button
-                              key={`track-${track}-day-${i}`}
-                              onClick={() => {
-                                setMaskedTracks(prev =>
-                                  isSelected
-                                    ? prev.filter(m => !(m.day === i && m.track === track))
-                                    : [...prev, {day: i, track}]
-                                );
-                              }}
-                              className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
-                                isSelected
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'bg-muted border-border hover:bg-muted/80'
-                              }`}
-                            >
-                              {dayNames[i]}
-                            </button>
-                          );
-                        })}
-                      </div>
+                        <option value={1}>Poniedziałek</option>
+                        <option value={2}>Wtorek</option>
+                        <option value={3}>Środa</option>
+                        <option value={4}>Czwartek</option>
+                        <option value={5}>Piątek</option>
+                        <option value={6}>Sobota</option>
+                        <option value={0}>Niedziela</option>
+                      </select>
                     </div>
-                  ))}
-                </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-gray-700">Tor:</label>
+                      <select
+                        value={selectedTrack}
+                        onChange={(e) => setSelectedTrack(Number(e.target.value))}
+                        className="w-full px-2 py-1 border rounded text-sm"
+                      >
+                        {facilityConfig.sections.map((track) => (
+                          <option key={track} value={track}>
+                            Tor {track}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <label className="text-xs font-semibold text-gray-700">Godzina:</label>
+                      <select
+                        value={selectedTimeSlot}
+                        onChange={(e) => setSelectedTimeSlot(e.target.value)}
+                        className="w-full px-2 py-1 border rounded text-sm max-h-40 overflow-y-auto"
+                      >
+                        {TIME_SLOTS.map((slot) => (
+                          <option key={slot.start} value={slot.start}>
+                            {slot.start} - {slot.end}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <button
+                      onClick={() => {
+                        const isDuplicate = maskedTracks.some(
+                          m => m.day === selectedDay && m.track === selectedTrack && m.timeSlotStart === selectedTimeSlot
+                        );
+                        if (!isDuplicate) {
+                          setMaskedTracks(prev => [...prev, {day: selectedDay, track: selectedTrack, timeSlotStart: selectedTimeSlot}]);
+                          toast.success("Godzina dodana");
+                        } else {
+                          toast.error("Ta kombinacja już istnieje");
+                        }
+                      }}
+                      className="w-full px-3 py-2 bg-primary text-primary-foreground rounded text-sm font-semibold hover:opacity-90 transition-opacity"
+                    >
+                      Dodaj
+                    </button>
+
+                    {maskedTracks.length > 0 && (
+                      <div className="space-y-2 border-t pt-3">
+                        <div className="text-xs font-semibold text-gray-700">Zasłonięte godziny:</div>
+                        <div className="space-y-1 max-h-40 overflow-y-auto">
+                          {maskedTracks.map((mask, idx) => {
+                            const dayNames = ["Nie", "Pon", "Wto", "Śro", "Czw", "Pią", "Sob"];
+                            const slot = TIME_SLOTS.find(s => s.start === mask.timeSlotStart);
+                            return (
+                              <div
+                                key={idx}
+                                className="flex items-center justify-between bg-muted p-2 rounded text-xs"
+                              >
+                                <span>
+                                  {dayNames[mask.day]} - T{mask.track} - {mask.timeSlotStart}-{slot?.end}
+                                </span>
+                                <button
+                                  onClick={() => {
+                                    setMaskedTracks(prev => prev.filter((_, i) => i !== idx));
+                                  }}
+                                  className="text-destructive hover:bg-destructive/10 p-1 rounded"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                        <button
+                          onClick={() => {
+                            setMaskedTracks([]);
+                            toast.success("Wyczyszczono");
+                          }}
+                          className="w-full px-2 py-1 bg-destructive/10 text-destructive rounded text-xs font-semibold hover:bg-destructive/20 transition-colors"
+                        >
+                          Wyczyść wszystko
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             
