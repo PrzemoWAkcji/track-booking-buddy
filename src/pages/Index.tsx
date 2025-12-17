@@ -38,11 +38,28 @@ const Index = () => {
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
   const [isRodoVersion, setIsRodoVersion] = useState(false);
   const [showColorsPanel, setShowColorsPanel] = useState(false);
-  const [maskedTracks, setMaskedTracks] = useState<Array<{day: number, track: number, timeSlotStart: string}>>([]);
+  const [maskedTracks, setMaskedTracksState] = useState<Array<{day: number, track: number, timeSlotStart: string}>>([]);
   const [showMaskingDropdown, setShowMaskingDropdown] = useState(false);
-  const [selectedDay, setSelectedDay] = useState<number>(0);
+  const [selectedDay, setSelectedDay] = useState<number>(1);
   const [selectedTrack, setSelectedTrack] = useState<number>(1);
   const [selectedTimeSlot, setSelectedTimeSlot] = useState<string>("07:00");
+
+  const setMaskedTracks = (value: Array<{day: number, track: number, timeSlotStart: string}> | ((prev: Array<{day: number, track: number, timeSlotStart: string}>) => Array<{day: number, track: number, timeSlotStart: string}>)) => {
+    const newValue = typeof value === 'function' ? value(maskedTracks) : value;
+    setMaskedTracksState(newValue);
+    localStorage.setItem('maskedTracks', JSON.stringify(newValue));
+  };
+
+  useEffect(() => {
+    const saved = localStorage.getItem('maskedTracks');
+    if (saved) {
+      try {
+        setMaskedTracksState(JSON.parse(saved));
+      } catch (e) {
+        console.error('Failed to load masked tracks:', e);
+      }
+    }
+  }, []);
   
   const facilityConfig = FACILITY_CONFIGS[facilityType];
   
@@ -289,12 +306,12 @@ const Index = () => {
                     <div className="space-y-2">
                       <label className="text-xs font-semibold text-gray-700">Tor:</label>
                       <select
-                        value={selectedTrack}
+                        value={String(selectedTrack)}
                         onChange={(e) => setSelectedTrack(Number(e.target.value))}
                         className="w-full px-2 py-1 border rounded text-sm"
                       >
                         {facilityConfig.sections.map((track) => (
-                          <option key={track} value={track}>
+                          <option key={track} value={String(track)}>
                             Tor {track}
                           </option>
                         ))}
@@ -322,7 +339,9 @@ const Index = () => {
                           m => m.day === selectedDay && m.track === selectedTrack && m.timeSlotStart === selectedTimeSlot
                         );
                         if (!isDuplicate) {
-                          setMaskedTracks(prev => [...prev, {day: selectedDay, track: selectedTrack, timeSlotStart: selectedTimeSlot}]);
+                          const newMask = {day: selectedDay, track: selectedTrack, timeSlotStart: selectedTimeSlot};
+                          console.log("Adding mask:", newMask);
+                          setMaskedTracks(prev => [...prev, newMask]);
                           toast.success("Godzina dodana");
                         } else {
                           toast.error("Ta kombinacja już istnieje");

@@ -123,7 +123,8 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       reservationsCount: reservations.length,
       weekStart: weekStart.toISOString(),
       facilityId: facilityConfig.id,
-      isRodoVersion
+      isRodoVersion,
+      maskedTracks
     });
     
     const doc = new jsPDF({
@@ -391,7 +392,19 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         const dayOfWeek = getDay(day);
         const track = SECTIONS[trackIndexInDay];
         
-        if (maskedTracks.some(m => m.day === dayIndex && m.track === track && m.timeSlotStart === slot.start)) {
+        const shouldMask = maskedTracks.some(m => m.day === dayOfWeek && m.track === track && m.timeSlotStart === slot.start);
+        
+        if (data.row.index === 0 && dayIndex === 0 && trackIndexInDay === 0) {
+          console.log("Cell check first row:", {
+            dayOfWeek,
+            track,
+            slotStart: slot.start,
+            maskedTracks: maskedTracks.slice(0, 3),
+            shouldMask
+          });
+        }
+        
+        if (shouldMask) {
           doc.setFillColor(180, 180, 180);
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
           doc.setDrawColor(0, 0, 0);
