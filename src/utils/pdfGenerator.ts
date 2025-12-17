@@ -505,15 +505,28 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       if (block.isEnd) blocksByDay[block.dayIndex].end = block;
     });
     
-    Object.entries(blocksByDay).forEach(([dayIndex, coords]: [string, any]) => {
+    Object.entries(blocksByDay).forEach(([dayIndexStr, coords]: [string, any]) => {
       if (coords.start && coords.end) {
+        const dayIndex = parseInt(dayIndexStr);
+        const day = weekDays[dayIndex];
+        const dayOfWeek = getDay(day);
+        
         const x = coords.start.x;
         const y = coords.start.y;
-        const width = coords.end.x - coords.start.x;
+        const fullWidth = coords.end.x - coords.start.x;
         const height = coords.end.y - coords.start.y;
+        const trackWidth = fullWidth / SECTIONS.length;
+        
+        let rectX = x;
+        let rectWidth = fullWidth;
+        
+        if (dayOfWeek === 5) {
+          rectX = x;
+          rectWidth = 3 * trackWidth;
+        }
         
         doc.setFillColor(134, 239, 172);
-        doc.rect(x, y, width, height, "F");
+        doc.rect(rectX, y, rectWidth, height, "F");
       }
     });
   }
