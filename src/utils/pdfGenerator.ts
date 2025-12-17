@@ -118,7 +118,7 @@ const normalizeText = (text: string) => text.normalize("NFD").replace(/[\u0300-\
 
 const isClosedLabel = (text: string) => normalizeText(text).includes("ZAMKNIETY");
 
-export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, facilityConfig: FacilityConfig, isRodoVersion = false, colorMap: Record<string, string> = {}) => {
+export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, facilityConfig: FacilityConfig, isRodoVersion = false, colorMap: Record<string, string> = {}, maskedTracks: number[] = []) => {
   try {
     console.log("Rozpoczęcie generowania PDF", { 
       reservationsCount: reservations.length,
@@ -390,6 +390,16 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         const trackIndexInDay = colIndexInData % SECTIONS.length;
         const day = weekDays[dayIndex];
         const dayOfWeek = getDay(day);
+        const track = SECTIONS[trackIndexInDay];
+        
+        if (maskedTracks.includes(track)) {
+          doc.setFillColor(180, 180, 180);
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
+          doc.setDrawColor(0, 0, 0);
+          doc.setLineWidth(0.2);
+          doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
+          return;
+        }
         
         // Store position for green rectangle drawing later
         if (isRodoVersion && facilityConfig.id === "track-6") {

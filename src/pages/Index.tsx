@@ -48,6 +48,7 @@ const Index = () => {
   const [isRodoVersion, setIsRodoVersion] = useState(false);
   const [showArchive, setShowArchive] = useState(false);
   const [showColorsPanel, setShowColorsPanel] = useState(false);
+  const [maskedTracks, setMaskedTracks] = useState<number[]>([]);
   
   const facilityConfig = FACILITY_CONFIGS[facilityType];
   
@@ -163,19 +164,17 @@ const Index = () => {
       const filteredReservations = reservations.filter(r => r.facilityType === facilityType);
       const colorMap = getColorMap();
       
-      // Dodajemy więcej logów, aby zdiagnozować problem
       console.log("Generowanie PDF dla:", {
         weekStart,
         facilityType,
         facilityConfig,
         isRodoVersion,
         filteredReservationsCount: filteredReservations.length,
+        maskedTracks,
         colorMap
       });
       
-      // Sprawdzamy, czy mamy jakieś rezerwacje
       if (filteredReservations.length === 0) {
-        // Jeśli nie ma rezerwacji, dodajmy testową rezerwację
         const testReservation: Reservation = {
           id: "test-id",
           contractor: "Test Kontrahent",
@@ -188,9 +187,9 @@ const Index = () => {
         };
         
         console.log("Dodajemy testową rezerwację:", testReservation);
-        generateWeeklyPDF([testReservation], weekStart, facilityConfig, isRodoVersion, colorMap);
+        generateWeeklyPDF([testReservation], weekStart, facilityConfig, isRodoVersion, colorMap, maskedTracks);
       } else {
-        generateWeeklyPDF(filteredReservations, weekStart, facilityConfig, isRodoVersion, colorMap);
+        generateWeeklyPDF(filteredReservations, weekStart, facilityConfig, isRodoVersion, colorMap, maskedTracks);
       }
       
       toast.success(`PDF ${isRodoVersion ? '(wersja RODO)' : ''} został wygenerowany`);
@@ -297,6 +296,31 @@ const Index = () => {
               <label htmlFor="rodo-version" className="text-sm font-medium cursor-pointer">
                 Wersja RODO (bez nazw)
               </label>
+            </div>
+
+            <div className="flex items-center gap-2 border-l pl-4">
+              <span className="text-xs text-muted-foreground">Zasłoń tory:</span>
+              <div className="flex gap-1">
+                {facilityConfig.sections.map((section) => (
+                  <button
+                    key={section}
+                    onClick={() => {
+                      setMaskedTracks(prev =>
+                        prev.includes(section)
+                          ? prev.filter(t => t !== section)
+                          : [...prev, section]
+                      );
+                    }}
+                    className={`w-8 h-8 rounded border text-xs font-semibold transition-colors ${
+                      maskedTracks.includes(section)
+                        ? 'bg-primary text-primary-foreground border-primary'
+                        : 'bg-muted border-border hover:bg-muted/80'
+                    }`}
+                  >
+                    {section}
+                  </button>
+                ))}
+              </div>
             </div>
             
             <Button
