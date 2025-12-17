@@ -392,13 +392,14 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         const dayOfWeek = getDay(day);
         const track = SECTIONS[trackIndexInDay];
         
-        const shouldMask = maskedTracks.some(m => m.day === dayOfWeek && m.track === track && m.timeSlotStart === slot.start);
+        const shouldMask = !isRodoVersion && maskedTracks.some(m => m.day === dayOfWeek && m.track === track && m.timeSlotStart === slot.start);
         
         if (data.row.index === 0 && dayIndex === 0 && trackIndexInDay === 0) {
           console.log("Cell check first row:", {
             dayOfWeek,
             track,
             slotStart: slot.start,
+            isRodoVersion,
             maskedTracks: maskedTracks.slice(0, 3),
             shouldMask
           });
@@ -539,34 +540,16 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         const height = coords.end.y - coords.start.y;
         const trackWidth = fullWidth / SECTIONS.length;
         
-        let numTracks = SECTIONS.length;
+        let rectX = x;
+        let rectWidth = fullWidth;
+        
         if (dayOfWeek === 5) {
-          numTracks = 3;
+          rectX = x;
+          rectWidth = 3 * trackWidth;
         }
         
-        const timeSlots = ["16:00", "16:30", "17:00", "17:30", "18:00", "18:30"];
-        
-        for (let trackIdx = 0; trackIdx < numTracks; trackIdx++) {
-          const trackNum = SECTIONS[trackIdx];
-          let isMasked = false;
-          
-          for (const timeSlot of timeSlots) {
-            if (maskedTracks.some(m => m.day === dayOfWeek && m.track === trackNum && m.timeSlotStart === timeSlot)) {
-              isMasked = true;
-              break;
-            }
-          }
-          
-          const rectX = x + trackIdx * trackWidth;
-          const rectY = y;
-          
-          if (isMasked) {
-            doc.setFillColor(180, 180, 180);
-          } else {
-            doc.setFillColor(134, 239, 172);
-          }
-          doc.rect(rectX, rectY, trackWidth, height, "F");
-        }
+        doc.setFillColor(134, 239, 172);
+        doc.rect(rectX, y, rectWidth, height, "F");
       }
     });
   }
