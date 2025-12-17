@@ -540,16 +540,31 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         const height = coords.end.y - coords.start.y;
         const trackWidth = fullWidth / SECTIONS.length;
         
-        let rectX = x;
-        let rectWidth = fullWidth;
-        
+        let numTracks = SECTIONS.length;
         if (dayOfWeek === 5) {
-          rectX = x;
-          rectWidth = 3 * trackWidth;
+          numTracks = 3;
         }
         
-        doc.setFillColor(134, 239, 172);
-        doc.rect(rectX, y, rectWidth, height, "F");
+        const timeSlots = ["16:00", "16:30", "17:00", "17:30", "18:00", "18:30"];
+        
+        for (let trackIdx = 0; trackIdx < numTracks; trackIdx++) {
+          const trackNum = SECTIONS[trackIdx];
+          let isMasked = false;
+          
+          for (const timeSlot of timeSlots) {
+            if (maskedTracks.some(m => m.day === dayOfWeek && m.track === trackNum && m.timeSlotStart === timeSlot)) {
+              isMasked = true;
+              break;
+            }
+          }
+          
+          const rectX = x + trackIdx * trackWidth;
+          
+          if (!isMasked) {
+            doc.setFillColor(134, 239, 172);
+            doc.rect(rectX, y, trackWidth, height, "F");
+          }
+        }
       }
     });
   }
