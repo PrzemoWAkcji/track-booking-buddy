@@ -392,7 +392,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         const dayOfWeek = getDay(day);
         const track = SECTIONS[trackIndexInDay];
         
-        const shouldMask = !isRodoVersion && maskedTracks.some(m => m.day === dayOfWeek && m.track === track && m.timeSlotStart === slot.start);
+        const shouldMask = maskedTracks.some(m => m.day === dayOfWeek && m.track === track && m.timeSlotStart === slot.start);
         
         if (data.row.index === 0 && dayIndex === 0 && trackIndexInDay === 0) {
           console.log("Cell check first row:", {
@@ -406,40 +406,18 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         }
         
         if (shouldMask) {
-          doc.setFillColor(180, 180, 180);
+          if (isRodoVersion) {
+            doc.setFillColor(134, 239, 172);
+          } else {
+            doc.setFillColor(180, 180, 180);
+          }
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
           doc.setDrawColor(0, 0, 0);
           doc.setLineWidth(0.2);
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "S");
           return;
         }
-        
-        // Store position for green rectangle drawing later
-        if (isRodoVersion && facilityConfig.id === "track-6") {
-          const isWeekday = dayOfWeek >= 1 && dayOfWeek <= 5;
-          const isAfternoon = slot.start >= "16:00" && slot.start < "19:00";
-          const isFirstTrack = trackIndexInDay === 0;
-          const isLastTrack = trackIndexInDay === SECTIONS.length - 1;
-          const isFirstSlot = slot.start === "16:00";
-          const isLastSlot = slot.start === "18:30";
-          
-          if (isWeekday && isAfternoon && isFirstTrack && isFirstSlot) {
-            // Store top-left corner
-            if (!(doc as any).rodoGreenBlocks) (doc as any).rodoGreenBlocks = [];
-            (doc as any).rodoGreenBlocks.push({ dayIndex, x: data.cell.x, y: data.cell.y, isStart: true });
-          }
-          if (isWeekday && isAfternoon && isLastTrack && isLastSlot) {
-            // Store bottom-right corner
-            if (!(doc as any).rodoGreenBlocks) (doc as any).rodoGreenBlocks = [];
-            (doc as any).rodoGreenBlocks.push({ 
-              dayIndex, 
-              x: data.cell.x + data.cell.width, 
-              y: data.cell.y + data.cell.height,
-              isEnd: true 
-            });
-          }
-        }
-        
+
         const cellData = data.cell.raw;
         
         // Handle cells with content (reservations)
@@ -517,57 +495,6 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
       }
     },
   });
-
-  if (isRodoVersion && facilityConfig.id === "track-6" && (doc as any).rodoGreenBlocks) {
-    const blocks = (doc as any).rodoGreenBlocks;
-    
-    const blocksByDay: { [key: number]: { start?: any; end?: any } } = {};
-    blocks.forEach((block: any) => {
-      if (!blocksByDay[block.dayIndex]) blocksByDay[block.dayIndex] = {};
-      if (block.isStart) blocksByDay[block.dayIndex].start = block;
-      if (block.isEnd) blocksByDay[block.dayIndex].end = block;
-    });
-    
-    Object.entries(blocksByDay).forEach(([dayIndexStr, coords]: [string, any]) => {
-      if (coords.start && coords.end) {
-        const dayIndex = parseInt(dayIndexStr);
-        const day = weekDays[dayIndex];
-        const dayOfWeek = getDay(day);
-        
-        const x = coords.start.x;
-        const y = coords.start.y;
-        const fullWidth = coords.end.x - coords.start.x;
-        const height = coords.end.y - coords.start.y;
-        const trackWidth = fullWidth / SECTIONS.length;
-        
-        let numTracks = SECTIONS.length;
-        if (dayOfWeek === 5) {
-          numTracks = 3;
-        }
-        
-        const timeSlots = ["16:00", "16:30", "17:00", "17:30", "18:00", "18:30"];
-        
-        for (let trackIdx = 0; trackIdx < numTracks; trackIdx++) {
-          const trackNum = SECTIONS[trackIdx];
-          let isMasked = false;
-          
-          for (const timeSlot of timeSlots) {
-            if (maskedTracks.some(m => m.day === dayOfWeek && m.track === trackNum && m.timeSlotStart === timeSlot)) {
-              isMasked = true;
-              break;
-            }
-          }
-          
-          const rectX = x + trackIdx * trackWidth;
-          
-          if (!isMasked) {
-            doc.setFillColor(134, 239, 172);
-            doc.rect(rectX, y, trackWidth, height, "F");
-          }
-        }
-      }
-    });
-  }
 
   // Add legend for RODO version - only if there are reservations
   if (isRodoVersion && reservations.length > 0) {
