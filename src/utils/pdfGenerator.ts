@@ -118,7 +118,7 @@ const normalizeText = (text: string) => text.normalize("NFD").replace(/[\u0300-\
 
 const isClosedLabel = (text: string) => normalizeText(text).includes("ZAMKNIETY");
 
-export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, facilityConfig: FacilityConfig, isRodoVersion = false, colorMap: Record<string, string> = {}, maskedTracks: number[] = []) => {
+export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, facilityConfig: FacilityConfig, isRodoVersion = false, colorMap: Record<string, string> = {}, maskedTracks: Array<{day: number, track: number}> = []) => {
   try {
     console.log("Rozpoczęcie generowania PDF", { 
       reservationsCount: reservations.length,
@@ -392,7 +392,7 @@ export const generateWeeklyPDF = (reservations: Reservation[], weekStart: Date, 
         const dayOfWeek = getDay(day);
         const track = SECTIONS[trackIndexInDay];
         
-        if (maskedTracks.includes(track)) {
+        if (maskedTracks.some(m => m.day === dayIndex && m.track === track)) {
           doc.setFillColor(180, 180, 180);
           doc.rect(data.cell.x, data.cell.y, data.cell.width, data.cell.height, "F");
           doc.setDrawColor(0, 0, 0);

@@ -38,7 +38,7 @@ const Index = () => {
   const [currentWeek, setCurrentWeek] = useState<Date>(new Date());
   const [isRodoVersion, setIsRodoVersion] = useState(false);
   const [showColorsPanel, setShowColorsPanel] = useState(false);
-  const [maskedTracks, setMaskedTracks] = useState<number[]>([]);
+  const [maskedTracks, setMaskedTracks] = useState<Array<{day: number, track: number}>>([]);
   
   const facilityConfig = FACILITY_CONFIGS[facilityType];
   
@@ -255,27 +255,93 @@ const Index = () => {
             </div>
 
             <div className="flex items-center gap-2 border-l pl-4">
-              <span className="text-xs text-muted-foreground">Zasłoń tory:</span>
-              <div className="flex gap-1">
-                {facilityConfig.sections.map((section) => (
-                  <button
-                    key={section}
-                    onClick={() => {
-                      setMaskedTracks(prev =>
-                        prev.includes(section)
-                          ? prev.filter(t => t !== section)
-                          : [...prev, section]
-                      );
-                    }}
-                    className={`w-8 h-8 rounded border text-xs font-semibold transition-colors ${
-                      maskedTracks.includes(section)
-                        ? 'bg-primary text-primary-foreground border-primary'
-                        : 'bg-muted border-border hover:bg-muted/80'
-                    }`}
-                  >
-                    {section}
-                  </button>
-                ))}
+              <span className="text-xs text-muted-foreground font-semibold">Zasłoń (dzień/tor):</span>
+              <div className="space-y-2">
+                <div className="flex gap-1 flex-wrap">
+                  {Array.from({length: 7}, (_, i) => {
+                    const dayNames = ["Pon", "Wto", "Śro", "Czw", "Pią", "Sob", "Nie"];
+                    return (
+                      <button
+                        key={`day-${i}`}
+                        onClick={() => {
+                          setMaskedTracks(prev => {
+                            const hasDay = prev.some(m => m.day === i);
+                            if (hasDay) {
+                              return prev.filter(m => m.day !== i);
+                            } else {
+                              return [...prev, ...facilityConfig.sections.map(track => ({day: i, track}))];
+                            }
+                          });
+                        }}
+                        title={`Zaznacz/odznacz wszystkie tory w ${dayNames[i]}`}
+                        className={`px-2 py-1 rounded border text-xs font-semibold transition-colors ${
+                          facilityConfig.sections.every(track => 
+                            maskedTracks.some(m => m.day === i && m.track === track)
+                          )
+                            ? 'bg-primary text-primary-foreground border-primary'
+                            : 'bg-muted border-border hover:bg-muted/80'
+                        }`}
+                      >
+                        {dayNames[i]}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex gap-1 flex-wrap">
+                  {facilityConfig.sections.map((track) => (
+                    <div key={`track-selector-${track}`} className="relative group">
+                      <button
+                        onClick={() => {
+                          setMaskedTracks(prev => {
+                            const allDaysSelected = prev.filter(m => m.track === track).length === 7;
+                            if (allDaysSelected) {
+                              return prev.filter(m => m.track !== track);
+                            } else {
+                              const newMasks = Array.from({length: 7}, (_, i) => ({day: i, track}));
+                              const filtered = prev.filter(m => m.track !== track);
+                              return [...filtered, ...newMasks];
+                            }
+                          });
+                        }}
+                        title={`Zaznacz/odznacz tor ${track} dla wszystkich dni`}
+                        className={`w-8 h-8 rounded border text-xs font-semibold transition-colors ${
+                          Array.from({length: 7}).every((_, i) =>
+                            maskedTracks.some(m => m.day === i && m.track === track)
+                          )
+                            ? 'bg-blue-500 text-white border-blue-500'
+                            : 'bg-muted border-border hover:bg-muted/80'
+                        }`}
+                      >
+                        T{track}
+                      </button>
+                      <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 hidden group-hover:flex gap-1 bg-white p-2 rounded shadow-lg z-10 border whitespace-nowrap flex-col">
+                        {Array.from({length: 7}, (_, i) => {
+                          const dayNames = ["Pon", "Wto", "Śro", "Czw", "Pią", "Sob", "Nie"];
+                          const isSelected = maskedTracks.some(m => m.day === i && m.track === track);
+                          return (
+                            <button
+                              key={`track-${track}-day-${i}`}
+                              onClick={() => {
+                                setMaskedTracks(prev =>
+                                  isSelected
+                                    ? prev.filter(m => !(m.day === i && m.track === track))
+                                    : [...prev, {day: i, track}]
+                                );
+                              }}
+                              className={`px-2 py-1 rounded text-xs font-semibold transition-colors ${
+                                isSelected
+                                  ? 'bg-primary text-primary-foreground'
+                                  : 'bg-muted border-border hover:bg-muted/80'
+                              }`}
+                            >
+                              {dayNames[i]}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
             
